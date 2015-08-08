@@ -1,0 +1,21 @@
+application: sgvehiclepark
+version: 1
+runtime: python27
+api_version: 1
+threadsafe: true
+
+handlers:
+- url: /js
+  static_dir: static/js
+
+- url: /
+  static_files: templates/index.html
+  upload: templates/index\.html
+
+- url: /action/.*
+  script: sg-app.wsgi.application
+
+
+libraries:
+- name: django
+  version: 1.5
