@@ -108,7 +108,7 @@ MIDDLEWARE_CLASSES = (
 ROOT_URLCONF = 'sg-app.urls'
 
 # Python dotted path to the WSGI application used by Django's runserver.
-WSGI_APPLICATION = 'sgvpstest.wsgi.application'
+WSGI_APPLICATION = 'sgvehiclepark.wsgi.application'
 
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 TEMPLATE_DIRS = (
