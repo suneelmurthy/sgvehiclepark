@@ -38,21 +38,21 @@ from google.appengine.ext import db
 from google.appengine.api import users
 
 # Create your models here.
-# Vehicle_Table
-class Vehicle_Table(ndb.Model):
+# Vehicle
+class Vehicle(ndb.Model):
 	Veh_Regnumber = ndb.StringProperty(required=True)
-  	Veh_Type = ndb.StringProperty(required=True)
-  	Veh_Chassisnumber = ndb.StringProperty(required=True)
+  Veh_Type = ndb.StringProperty(required=True)
+  Veh_Chassisnumber = ndb.StringProperty(required=True)
 	Veh_Enginenumber = ndb.StringProperty(required=True)
 
-# CreditCard_Table
-class Creditcard_Table(ndb.Model):
+# CreditCard
+class Creditcard(ndb.Model):
   	Card_Name = ndb.StringProperty(required=True)
   	Card_Number = ndb.IntegerProperty(required=True)
   	Card_Expiry = ndb.StringProperty(required=True)
 
-# Transaction_Table
-class Transaction_Table(ndb.Model):
+# Transaction
+class Transaction(ndb.Model):
   	Trans_Datetime = ndb.DateTimeProperty(required=True)
   	Trans_Type = ndb.StringProperty(required=True)
   	Trans_Regnumber = ndb.StringProperty(required=True)
@@ -61,8 +61,8 @@ class Transaction_Table(ndb.Model):
   	Trans_Duration = ndb.TimeProperty(required=True)
   	Trans_Amount = ndb.IntegerProperty(required=True)
 
-# Customer_Table for Customer Details
-class Customer_Table (ndb.Model) :
+# Customer for Customer Details
+class Customer (ndb.Model) :
 	Cust_Nric = ndb.StringProperty(required=True)
 	Cust_Handphone = ndb.IntegerProperty(required=True)
 	Cust_Password = ndb.StringProperty(required=True)
@@ -70,12 +70,12 @@ class Customer_Table (ndb.Model) :
 	Cust_FirstName = ndb.StringProperty()
 	Cust_LastName = ndb.StringProperty()
 	Cust_Email = ndb.StringProperty()
-	Cust_Creditcard = ndb.StructuredProperty(Creditcard_Table, repeated=True)
-	Cust_Vehicle = ndb.StructuredProperty(Vehicle_Table, repeated=True)
-	Cust_Transaction = ndb.StructuredProperty(Transaction_Table, repeated=True)
+	Cust_Creditcard = ndb.StructuredProperty(Creditcard, repeated=True)
+	Cust_Vehicle = ndb.StructuredProperty(Vehicle, repeated=True)
+	Cust_Transaction = ndb.StructuredProperty(Transaction, repeated=True)
 
-# Product_Table for product listing
-class Userpattern_Table(ndb.Model):
+# Product for product listing
+class Userpattern(ndb.Model):
   	Usrpat_Datetime = ndb.DateTimeProperty(required=True)
   	Usrpat_Parkingtype = ndb.StringProperty(required=True)
   	Usrpat_Geolocation = ndb.GeoPtProperty(required=True)
