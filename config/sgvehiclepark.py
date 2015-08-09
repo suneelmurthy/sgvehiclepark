@@ -74,15 +74,6 @@ def query(request):
     data= json.dumps(root)
     return http.HttpResponse(data);
 
-
-def readLocation(file):
-    with open(file, 'rU') as csvfile:
-        reader = csv.reader(csvfile)
-        gp=None
-        for row in reader :
-            gp = db.GeoPt(float(row[0]), float(row[1]))
-    return gp
-
 def refresh(request):
         response = http.HttpResponse()
         response._headers['Content-Type'] = 'text/json'
@@ -143,72 +134,208 @@ def refresh(request):
                 productIndex.put(productDocument)
         return http.HttpResponse();
 
-def blocktableupdate(request):
-    #Variables Definition
-     response = http.HttpResponse()
-     BlockTableData = []
-     index=1
-     response.write('Database Update in Progress...')
 
-     #Creating the Index Table
-     BlockTableIndex = search.Index(name=BLOCKTABLE_INDEX)
-     with open('data/PostalCode/BlockTable.csv', 'rU') as csvfile:
-         reader = csv.reader(csvfile)
-         for row in reader :
-            entry = models.Block_Table(Blk_PostalCode=int(row[0]), Blk_Name=row[1], Blk_BuildingType=row[2], Blk_Description=row[3], Blk_GeoLocation = db.GeoPt(float(row[4]), float(row[5])), Blk_Address = row[6], Blk_Phone = row[7], Blk_Email = row[8], Blk_Url=row[9], Blk_Image=row[10], Blk_Levels=row[11], Blk_Map=row[12], Blk_Size=row[13])
-            entry.put()
-            BlockTableData.append(search.Document(
-            fields=[
-                search.TextField(name='Blk_PostalCode', value=row[0]),
-                search.TextField(name='Blk_Name', value=row[1]),
-                search.TextField(name='Blk_Address', value=row[5]),
-                search.TextField(name='Blk_Phone', value=row[6]),
-                search.TextField(name='Blk_Email', value=row[7]),
-                ]))
+# Method to add new user
+# Throw an error if user already exist
+def sgvpnewuserregister(request):
+    entity = models.Customer_Table.get_by_key_name(request.Cust_Nric)
+    if not entity:
+        #No entry with the NRIC detected in the db
+        #Creaty entity
+        entity = models.Customer_Table
+        entity.Cust_Nric = request.Cust_Nric
+        entity.Cust_Handphone = request.Cust_Handphone
+        entity.Cust_Password = request.Cust_Password
+        entity.Cust_Amount = 0
+        entity.put()
+        # Registration is successful
+        response = 'Registration Successful'
+    else:
+        #Entity is present
+        response = 'User Already Exists'
+    return response
 
-            try:
-                if index % 200 == 0:
-                   print "Commiting index for " + str(index)
-                   BlockTableIndex.put(BlockTableData)
-                   BlockTableData = []
-            except search.Error:
-                print "error while indexing.."
-            index +=1
-         index = 0
-     return http.HttpResponse();
 
-def refreshRoute(request):
-     r = [];
-     with open('data/route2.csv', 'rU') as csvfile:
-         reader = csv.reader(csvfile)
-         for row in reader :
-            r.append({'lat': row[0], 'long' : row[1]});
-     root = {
-        'data' : r
-     };
-     data= json.dumps(root)
-     return http.HttpResponse(data);
+# Method to update user information
+# Throw an error if user does not exist
+def sgvpupdateuserinfo(request):
+    entity = models.Customer_Table.get_by_key_name(request.Cust_Nric)
+    if not entity:
+        # No entry with the NRIC detected in the db
+        # Invalid Request
+        response = 'Invalid User'
+    else:
+        #Entity is present
+        #Update the User Information
+        entity.Cust_FirstName = request.Cust_FirstName
+        entity.Cust_LastName = request.Cust_LastName
+        entity.Cust_Email = request.Cust_Email
+        entity.put()
+        response = 'User Information Update Successful'
+    return response
 
-def searchByDistance(user_location):
 
-    index = search.Index(PRODUCT_INDEX)
+# Method to edit/add credit card information
+# Throw an error if credit card already exist.
+def sgvpupdatecreditcardinfo(request):
+    entity = models.Customer_Table.get_by_key_name(request.Cust_Nric)
+    if not entity:
+        # No entry with the NRIC detected in the db
+        # Invalid Request
+        response = 'Invalid User'
+    else:
+        # Entity is present
+        # Check if the credit card already exist.
+        entity_card = models.Customer_Table.Cust_Creditcard.get_by_key_name(request.Card_Number)
+        if not entity_card:
+            # No entry with above card is detected.
+            # Add card
+            entity_card = models.Creditcard_Table
+            entity_card.Card_Name = request.Card_Name
+            entity_card.Card_Number = request.Card_Number
+            entity_card.Card_Expiry = request.Card_Expiry
+            entity.Cust_Creditcard.append(entity_card)
+            # Credit card added successfully
+            response = 'New Credit Card Added'
+        else:
+            # Credit card is detected.
+            # Update the data
+            entity.Cust_Creditcard.Card_Name = request.Card_Name
+            entity.Cust_Creditcard.Card_Number = request.Card_Number
+            entity.Cust_Creditcard.Card_Expiry = request.Card_Expiry
+            entity.put()
+            # Credit card added successfully
+            response = 'Credit Card Update Successful'
 
-    #user_location = (-33.857, 151.215)
-    query = "distance(location, geopoint(%f, %f)) < %f" % (
-        user_location[0], user_location[1], 5000)
+    return response
 
-    loc_expr = "distance(location, geopoint(%f, %f))" % (
-        user_location[0], user_location[1])
+# Method to edit/add vehicle information
+# Throw an error if vehicle already exist or if invalid.
+def sgvpupdatevehicleinfo(request):
+    entity = models.Customer_Table.get_by_key_name(request.Cust_Nric)
+    if not entity:
+        # No entry with the NRIC detected in the db
+        # Invalid Request
+        response = 'Invalid User'
+    else:
+        # Entity is present
+        # Check if the vehicle already exist.
+        entity_vehicle = models.Customer_Table.Cust_Vehicle.get_by_key_name(request.Veh_Regnumber)
+        if not entity_vehicle:
+            # No entry with above card is detected.
+            # Add card
+            entity_vehicle = models.Cust_Vehicle
+            entity_vehicle.Veh_Regnumber = request.Veh_Regnumber
+            # Fetch the below information from internal database or API call
+            entity_vehicle.Veh_Type = request.Veh_Type
+            entity_vehicle.Veh_Chassisnumber = request.Veh_Chassisnumber
+            entity_vehicle.Veh_Enginenumber = request.Veh_Enginenumber
+            entity.Cust_Vehicle.append(entity_vehicle)
+            # Credit card added successfully
+            response = 'New Vehicle Added'
+        else:
+            # Credit card is detected.
+            # Update the data
+            entity.Cust_Vehicle.Veh_Regnumber = request.Card_Name
+            entity.Cust_Vehicle.Veh_Type = request.Card_Number
+            entity.Cust_Vehicle.Veh_Chassisnumber = request.Card_Expiry
+            entity.Cust_Vehicle.Veh_Enginenumber = request.Veh_Enginenumber
+            entity.put()
+            # Credit card added successfully
+            response = 'Vehicle Update Successful'
 
-    sortexpr = search.SortExpression(
-        expression=loc_expr,
-        direction=search.SortExpression.ASCENDING, default_value=5001)
+    return response
 
-    search_query = search.Query(
-        query_string=query,
-        options=search.QueryOptions(
-            sort_options=search.SortOptions(expressions=[sortexpr])))
+# Method to authenticate user log in
+# Throw an error if user does not exist or invalid password.
+def sgvpuserauthentication(request):
+    entity = models.Customer_Table.get_by_key_name(request.Cust_Nric)
+    if not entity:
+        # No entry with the NRIC detected in the db
+        # Invalid Request
+        response = 'Invalid User'
+    else:
+        # Entity is present
+        # Hash the password
+        hash_pwd = hash(request.Cust_Password)
+        # Compare the password
+        if hash_pwd == entity.Cust_Password:
+            # Valid credentials
+            response = 'Login Successful'
+        else:
+            # Incorrect credentials
+            response = 'Invalid UserID or Password'
+    return response
 
-    results = index.search(search_query)
 
-    return results
+# Method to delete user
+# Throw an error if user does not exist or invalid password.
+def sgvpsdeleteuser(request):
+    entity = models.Customer_Table.get_by_key_name(request.Cust_Nric)
+    if not entity:
+        # No entry with the NRIC detected in the db
+        # Invalid Request
+        response = 'Invalid User'
+    else:
+        # Entity is present
+        # Hash the password
+        hash_pwd = hash(request.Cust_Password)
+        # Compare the password
+        if hash_pwd == entity.Cust_Password:
+            # Valid credentials
+            # Delete Account
+            entity.delete()
+            response = 'Account Deleted Successfully'
+        else:
+            # Incorrect credentials
+            response = 'Invalid UserID or Password'
+    return response
+
+
+# Method to add currency to the user
+# Throw an error if user does not exist or invalid password.
+def sgvpaddcurrency(request):
+    entity = models.Customer_Table.get_by_key_name(request.Cust_Nric)
+    if not entity:
+        # No entry with the NRIC detected in the db
+        # Invalid Request
+        response = 'Invalid User'
+    else:
+        # Entity is present
+        # Add top up amount.
+        # Cannot be greater than $100
+        if request.Cust_Amount > 100:
+            # Invalid amount.
+            # Do Nothing.
+            response = 'Amount Exceeds the limit'
+        elif request.Cust_Amount < 0:
+            # Invalid amount
+            response = 'Invalid Amount'
+        else:
+            # Valid Amount (0 - $100)
+            # Decrypt the amount
+            decrypt_amount = entity.Cust_Amount
+            # Add the amount
+            new_amount = decrypt_amount + request.Cust_Amount
+            # Encrypt the amount
+            encrypt_amount = new_amount
+            entity.Cust_Amount = encrypt_amount
+            response = 'Amount Update Successful'
+    return response
+
+# Method to read the currency
+# Throw an error if user does not exist or invalid password.
+def sgvpreadcurrency(request):
+    entity = models.Customer_Table.get_by_key_name(request.Cust_Nric)
+    if not entity:
+        # No entry with the NRIC detected in the db
+        # Invalid Request
+        response = 'Invalid User'
+    else:
+        # Entity is present
+        # Add top up amount.
+        # Cannot be greater than $100
+        decrypt_amount = entity.Cust_Amount
+        response = 'Amount Read Successful'
+    return response
+

@@ -36,13 +36,14 @@ from django.conf.urls import patterns, include, url
 urlpatterns = patterns('',
     url(r'query$', 'config.sgvehiclepark.query'), #ending with url pattern should be used
     url(r'sgvpNewUserRegister', 'config.sgvehiclepark.sgvpnewuserregister'), #New User Registration
-    url(r'sgvpUpdateUserInfo', 'config.sgvehiclepark.sgvpUpdateUserInfo'), #Edit/Modify User Information
-    url(r'sgvpUpdateCreditCardInfo', 'config.sgvehiclepark.sgvpUpdateCreditCardInfo'), #Add/Modify Creditcard Information
-    url(r'sgvpUpdateVehicleInfo', 'config.sgvehiclepark.sgvpUpdateVehicleInfo'), #Add/Modify Vehicle Information
-    url(r'sgvpStartCoupon', 'config.sgvehiclepark.sgvpStartCoupon'), #Start parking coupon
-    url(r'sgvpRenewCoupon', 'config.sgvehiclepark.sgvpRenewCoupon'), #Renew parking coupon
-    url(r'sgvpAddCurrency', 'config.sgvehiclepark.sgvpAddCurrency'), #Add currency to the account
-    url(r'sgvpUserAuthentication', 'config.sgvehiclepark.sgvpUserAuthentication'), #User sign in
-    url(r'sgvpUserTransactionHistory', 'config.sgvehiclepark.sgvpUserTransactionHistory'), #User transaction history
-    url(r'sgvpStopCoupon', 'config.sgvehiclepark.sgvpStopCoupon'), #Stop parking coupon
+    url(r'sgvpUpdateUserInfo', 'config.sgvehiclepark.sgvpupdateuserinfo'), #Edit/Modify User Information
+    url(r'sgvpUpdateCreditCardInfo', 'config.sgvehiclepark.sgvpupdatecreditcardinfo'), #Add/Modify Creditcard Information
+    url(r'sgvpUpdateVehicleInfo', 'config.sgvehiclepark.sgvpupdatevehicleinfo'), #Add/Modify Vehicle Information
+    url(r'sgvpStartCoupon', 'config.sgvehiclepark.sgvpstartcoupon'), #Start parking coupon
+    url(r'sgvpRenewCoupon', 'config.sgvehiclepark.sgvprenewcoupon'), #Renew parking coupon
+    url(r'sgvpAddCurrency', 'config.sgvehiclepark.sgvpaddcurrency'), #Add currency to the account
+    url(r'sgvpUserAuthentication', 'config.sgvehiclepark.sgvpuserauthentication'), #User sign in
+    url(r'sgvpUserTransactionHistory', 'config.sgvehiclepark.sgvpusertransactionhistory'), #User transaction history
+    url(r'sgvpStopCoupon', 'config.sgvehiclepark.sgvpstopcoupon'), #Stop parking coupon
+    url(r'sgvpDeleteUser', 'config.sgvehiclepark.sgvpsdeleteuser'), #Stop parking coupon
 )
