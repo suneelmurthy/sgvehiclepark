@@ -78,8 +78,8 @@ class Customer_Table (ndb.Model) :
 class Userpattern_Table(ndb.Model):
   	Usrpat_Datetime = ndb.DateTimeProperty(required=True)
   	Usrpat_Parkingtype = ndb.StringProperty(required=True)
-  	Prd_Geolocation = ndb.GeoPtProperty(required=True)
-  	Prd_Duration = ndb.TimeProperty()
-	Prd_Nric = ndb.StringProperty(required=True)
-  	Prd_Regnumber = ndb.StringProperty(required=True)
+  	Usrpat_Geolocation = ndb.GeoPtProperty(required=True)
+  	Usrpat_Duration = ndb.TimeProperty()
+	Usrpat_Nric = ndb.StringProperty(required=True)
+  	Usrpat_Regnumber = ndb.StringProperty(required=True)
 
