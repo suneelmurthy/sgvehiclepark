@@ -42,10 +42,13 @@ import json
 from django.shortcuts import render_to_response
 from django import http
 import pickle
+from google.appengine.api import background_thread
 
 PRODUCT_INDEX = "ProductIndex"
 SHOP_INDEX = "ShopIndex"
 BLOCKTABLE_INDEX = "BlockTableIndex"
+HOURLY_PRICE = 1.0
+
 
 def query(request):
     response = http.HttpResponse()
@@ -138,11 +141,11 @@ def refresh(request):
 # Method to add new user
 # Throw an error if user already exist
 def sgvpnewuserregister(request):
-    entity = models.Customer_Table.get_by_key_name(request.Cust_Nric)
+    entity = models.Customer.get_by_key_name(request.Cust_Nric)
     if not entity:
         #No entry with the NRIC detected in the db
         #Creaty entity
-        entity = models.Customer_Table
+        entity = models.Customer
         entity.Cust_Nric = request.Cust_Nric
         entity.Cust_Handphone = request.Cust_Handphone
         entity.Cust_Password = request.Cust_Password
@@ -159,7 +162,7 @@ def sgvpnewuserregister(request):
 # Method to update user information
 # Throw an error if user does not exist
 def sgvpupdateuserinfo(request):
-    entity = models.Customer_Table.get_by_key_name(request.Cust_Nric)
+    entity = models.Customer.get_by_key_name(request.Cust_Nric)
     if not entity:
         # No entry with the NRIC detected in the db
         # Invalid Request
@@ -178,7 +181,7 @@ def sgvpupdateuserinfo(request):
 # Method to edit/add credit card information
 # Throw an error if credit card already exist.
 def sgvpupdatecreditcardinfo(request):
-    entity = models.Customer_Table.get_by_key_name(request.Cust_Nric)
+    entity = models.Customer.get_by_key_name(request.Cust_Nric)
     if not entity:
         # No entry with the NRIC detected in the db
         # Invalid Request
@@ -186,11 +189,11 @@ def sgvpupdatecreditcardinfo(request):
     else:
         # Entity is present
         # Check if the credit card already exist.
-        entity_card = models.Customer_Table.Cust_Creditcard.get_by_key_name(request.Card_Number)
+        entity_card = models.Customer.Cust_Creditcard.get_by_key_name(request.Card_Number)
         if not entity_card:
             # No entry with above card is detected.
             # Add card
-            entity_card = models.Creditcard_Table
+            entity_card = models.Creditcard
             entity_card.Card_Name = request.Card_Name
             entity_card.Card_Number = request.Card_Number
             entity_card.Card_Expiry = request.Card_Expiry
@@ -212,7 +215,7 @@ def sgvpupdatecreditcardinfo(request):
 # Method to edit/add vehicle information
 # Throw an error if vehicle already exist or if invalid.
 def sgvpupdatevehicleinfo(request):
-    entity = models.Customer_Table.get_by_key_name(request.Cust_Nric)
+    entity = models.Customer.get_by_key_name(request.Cust_Nric)
     if not entity:
         # No entry with the NRIC detected in the db
         # Invalid Request
@@ -220,7 +223,7 @@ def sgvpupdatevehicleinfo(request):
     else:
         # Entity is present
         # Check if the vehicle already exist.
-        entity_vehicle = models.Customer_Table.Cust_Vehicle.get_by_key_name(request.Veh_Regnumber)
+        entity_vehicle = models.Customer.Cust_Vehicle.get_by_key_name(request.Veh_Regnumber)
         if not entity_vehicle:
             # No entry with above card is detected.
             # Add card
@@ -249,7 +252,7 @@ def sgvpupdatevehicleinfo(request):
 # Method to authenticate user log in
 # Throw an error if user does not exist or invalid password.
 def sgvpuserauthentication(request):
-    entity = models.Customer_Table.get_by_key_name(request.Cust_Nric)
+    entity = models.Customer.get_by_key_name(request.Cust_Nric)
     if not entity:
         # No entry with the NRIC detected in the db
         # Invalid Request
@@ -271,7 +274,7 @@ def sgvpuserauthentication(request):
 # Method to delete user
 # Throw an error if user does not exist or invalid password.
 def sgvpsdeleteuser(request):
-    entity = models.Customer_Table.get_by_key_name(request.Cust_Nric)
+    entity = models.Customer.get_by_key_name(request.Cust_Nric)
     if not entity:
         # No entry with the NRIC detected in the db
         # Invalid Request
@@ -295,7 +298,7 @@ def sgvpsdeleteuser(request):
 # Method to add currency to the user
 # Throw an error if user does not exist or invalid password.
 def sgvpaddcurrency(request):
-    entity = models.Customer_Table.get_by_key_name(request.Cust_Nric)
+    entity = models.Customer.get_by_key_name(request.Cust_Nric)
     if not entity:
         # No entry with the NRIC detected in the db
         # Invalid Request
@@ -326,7 +329,7 @@ def sgvpaddcurrency(request):
 # Method to read the currency
 # Throw an error if user does not exist or invalid password.
 def sgvpreadcurrency(request):
-    entity = models.Customer_Table.get_by_key_name(request.Cust_Nric)
+    entity = models.Customer.get_by_key_name(request.Cust_Nric)
     if not entity:
         # No entry with the NRIC detected in the db
         # Invalid Request
@@ -338,4 +341,25 @@ def sgvpreadcurrency(request):
         decrypt_amount = entity.Cust_Amount
         response = 'Amount Read Successful'
     return response
+
+
+def startTimer():
+    t = background_thread.start_new_background_thread(startParking, ["foo", "bar"])
+
+def startParking(userId):
+    #First get the coupon entry and balance for this user.
+    #If there is enough balance, start a timer for half hour first.
+    user = models.Customer.get_by_key_name(userId)
+    for 
+    Timer(5, update, ()).start()
+
+
+
+
+
+
+
+
+
+
 
