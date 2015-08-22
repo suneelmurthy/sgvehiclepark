@@ -35,15 +35,27 @@ from django.conf.urls import patterns, include, url
 
 urlpatterns = patterns('',
     url(r'query$', 'config.sgvehiclepark.query'), #ending with url pattern should be used
+
     url(r'sgvpNewUserRegister', 'config.sgvehiclepark.sgvpnewuserregister'), #New User Registration
     url(r'sgvpUpdateUserInfo', 'config.sgvehiclepark.sgvpupdateuserinfo'), #Edit/Modify User Information
-    url(r'sgvpUpdateCreditCardInfo', 'config.sgvehiclepark.sgvpupdatecreditcardinfo'), #Add/Modify Creditcard Information
-    url(r'sgvpUpdateVehicleInfo', 'config.sgvehiclepark.sgvpupdatevehicleinfo'), #Add/Modify Vehicle Information
-    url(r'sgvpStartCoupon', 'config.sgvehiclepark.sgvpstartcoupon'), #Start parking coupon
-    url(r'sgvpRenewCoupon', 'config.sgvehiclepark.sgvprenewcoupon'), #Renew parking coupon
-    url(r'sgvpAddCurrency', 'config.sgvehiclepark.sgvpaddcurrency'), #Add currency to the account
+    url(r'sgvpDeleteUser', 'config.sgvehiclepark.sgvpsdeleteuser'), #Stop parking coupon
     url(r'sgvpUserAuthentication', 'config.sgvehiclepark.sgvpuserauthentication'), #User sign in
     url(r'sgvpUserTransactionHistory', 'config.sgvehiclepark.sgvpusertransactionhistory'), #User transaction history
+
+    url(r'sgvpUpdateCreditCardInfo', 'config.sgvehiclepark.sgvpupdatecreditcardinfo'), #Add/Modify Creditcard Information
+    url(r'sgvpDeleteCreditCard', 'config.sgvehiclepark.sgvpdeletecreditcard'), #Add/Modify Creditcard Information
+
+    url(r'sgvpNewVehicleRegister', 'config.sgvehiclepark.sgvpnewvehicleregister'), #Add/Modify Vehicle Information
+    url(r'sgvpDeleteVehicle', 'config.sgvehiclepark.sgvpdeletevehicle'), #Add/Modify Vehicle Information
+
+    url(r'sgvpStartCoupon', 'config.sgvehiclepark.sgvpstartcoupon'), #Start parking coupon
+    url(r'sgvpRenewCoupon', 'config.sgvehiclepark.sgvprenewcoupon'), #Renew parking coupon
     url(r'sgvpStopCoupon', 'config.sgvehiclepark.sgvpstopcoupon'), #Stop parking coupon
-    url(r'sgvpDeleteUser', 'config.sgvehiclepark.sgvpsdeleteuser'), #Stop parking coupon
+
+    url(r'sgvpUpdateCurrency', 'config.sgvehiclepark.sgvpupdatecurrency'), #Add currency to the account
+    url(r'sgvpReadCurrency', 'config.sgvehiclepark.sgvpreadcurrency'), #Add currency to the account
+
+
+    url(r'sgvptestuser', 'config.sgvehiclepark.sgvptestuser'), #Stop parking coupon
+    url(r'sgvptestcard', 'config.sgvehiclepark.sgvptestcard'), #Stop parking coupon
 )

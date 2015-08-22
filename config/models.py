@@ -41,8 +41,8 @@ from google.appengine.api import users
 # Vehicle
 class Vehicle(ndb.Model):
 	Veh_Regnumber = ndb.StringProperty(required=True)
-  Veh_Type = ndb.StringProperty(required=True)
-  Veh_Chassisnumber = ndb.StringProperty(required=True)
+  	Veh_Type = ndb.StringProperty(required=True)
+  	Veh_Chassisnumber = ndb.StringProperty(required=True)
 	Veh_Enginenumber = ndb.StringProperty(required=True)
 
 # CreditCard
@@ -53,13 +53,18 @@ class Creditcard(ndb.Model):
 
 # Transaction
 class Transaction(ndb.Model):
-  	Trans_Datetime = ndb.DateTimeProperty(required=True)
+  	Trans_Date = ndb.DateProperty(required=True)
   	Trans_Type = ndb.StringProperty(required=True)
   	Trans_Regnumber = ndb.StringProperty(required=True)
   	Trans_Chassisnumber = ndb.StringProperty(required=True)
   	Trans_Enginenumber = ndb.StringProperty(required=True)
-  	Trans_Duration = ndb.TimeProperty(required=True)
-  	Trans_Amount = ndb.IntegerProperty(required=True)
+  	Trans_Duration = ndb.TimeProperty()
+  	Trans_Amount = ndb.FloatProperty(required=True)
+	Tran_Nric = ndb.StringProperty(required=True)
+	Tran_Timerstatus = ndb.IntegerProperty()
+	Trans_Starttime = ndb.TimeProperty()
+	Trans_Stoptime = ndb.TimeProperty()
+
 
 # Customer for Customer Details
 class Customer (ndb.Model) :
@@ -82,4 +87,3 @@ class Userpattern(ndb.Model):
   	Usrpat_Duration = ndb.TimeProperty()
 	Usrpat_Nric = ndb.StringProperty(required=True)
   	Usrpat_Regnumber = ndb.StringProperty(required=True)
-

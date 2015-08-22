@@ -5,6 +5,9 @@ api_version: 1
 threadsafe: true
 
 handlers:
+# Endpoints handler: Must be /_ah/spi. Apps send requests to /_ah/api, but these are handled at /_ah/spi!!
+- url: /_ah/spi/.*
+  script: sgvehiclepark_api.APPLICATION
 - url: /js
   static_dir: static/js
 
@@ -13,9 +16,13 @@ handlers:
   upload: templates/index\.html
 
 - url: /action/.*
-  script: sg-app.wsgi.application
+  script: sgvehiclepark.wsgi.application
 
 
 libraries:
+- name: pycrypto
+  version: 2.6
+- name: endpoints
+  version: 1.0
 - name: django
   version: 1.5

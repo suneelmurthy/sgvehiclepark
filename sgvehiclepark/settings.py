@@ -105,7 +105,7 @@ MIDDLEWARE_CLASSES = (
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
-ROOT_URLCONF = 'sg-app.urls'
+ROOT_URLCONF = 'sgvehiclepark.urls'
 
 # Python dotted path to the WSGI application used by Django's runserver.
 WSGI_APPLICATION = 'sgvehiclepark.wsgi.application'
