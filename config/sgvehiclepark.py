@@ -45,6 +45,7 @@ import hashlib, binascii
 import threading
 import time
 from threading import Timer
+import logging
 
 #from simplecrypt import encrypt, decrypt
 
@@ -79,6 +80,7 @@ class request_class:
         self.Veh_Regnumber = None
         self.duration = None
         self.coupon = None
+        self.Tran_Records = int(0)
 
 
 
@@ -188,14 +190,16 @@ def sgvpnewuserregister(request):
         entity = models.Customer()
         entity.Cust_Nric = request.Cust_Nric
         entity.Cust_Handphone = request.Cust_Handphone
-        #hashedPwd = hashlib.sha256(str(request.Cust_Password) + str(entity.Cust_Handphone))
+        hash_pwd = hashlib.sha256(str(request.Cust_Password) + str(entity.Cust_Handphone))
+        hash_pwd_hex = hash_pwd.hexdigest()
         # Hashing the password with salt key
-        hash_pwd = hashlib.pbkdf2_hmac('sha256', str(request.Cust_Password),str(entity.Cust_Handphone),100000)
-        hash_pwd = binascii.hexlify(hash_pwd)
-        entity.Cust_Password = hash_pwd
+        #hash_pwd = hashlib.pbkdf2_hmac('sha256', str(request.Cust_Password),str(entity.Cust_Handphone),100000)
+        #hash_pwd = binascii.hexlify(hash_pwd)
+        #entity.Cust_Password = hash_pwd
+        entity.Cust_Password = str(hash_pwd_hex)
         # ciphertext = encrypt(entity.Cust_Handphone,10)
         # entity.Cust_Amount = binascii.hexlify(ciphertext)
-        entity.Cust_Amount = 10
+        entity.Cust_Amount = float(10)
         entity.put()
         # Registration is successful
         response = 'Registration Successful'
@@ -243,10 +247,12 @@ def sgvpsdeleteuser(request):
     else:
         # User present
         # Hash the password
-        hash_pwd = hashlib.pbkdf2_hmac('sha256', str(request.Cust_Password),str(entity.Cust_Handphone),100000)
-        hash_pwd = binascii.hexlify(hash_pwd)
+        # hash_pwd = hashlib.pbkdf2_hmac('sha256', str(request.Cust_Password),str(entity.Cust_Handphone),100000)
+        # hash_pwd = binascii.hexlify(hash_pwd)
+        hash_pwd = hashlib.sha256(str(request.Cust_Password) + str(entity.Cust_Handphone))
+        hash_pwd_hex = hash_pwd.hexdigest()
         # Compare the password
-        if hash_pwd == entity.Cust_Password:
+        if hash_pwd_hex == entity.Cust_Password:
             # Valid credentials
             # Delete Account
             entity.key.delete()
@@ -269,15 +275,36 @@ def sgvpuserauthentication(request):
     else:
         # Entity is present
         # Hash the password
-        hash_pwd = hashlib.pbkdf2_hmac('sha256', str(request.Cust_Password),str(entity.Cust_Handphone),100000)
-        hash_pwd = binascii.hexlify(hash_pwd)
+        # hash_pwd = hashlib.pbkdf2_hmac('sha256', str(request.Cust_Password),str(entity.Cust_Handphone),100000)
+        # hash_pwd = binascii.hexlify(hash_pwd)
         # Compare the password
-        if hash_pwd == entity.Cust_Password:
+        hash_pwd = hashlib.sha256(str(request.Cust_Password) + str(entity.Cust_Handphone))
+        hash_pwd_hex = hash_pwd.hexdigest()
+        if hash_pwd_hex == entity.Cust_Password:
             # Valid credentials
             response = 'Login Successful'
         else:
             # Incorrect credentials
             response = 'Invalid UserID or Password'
+    return response
+
+
+# Method to read out latest 10 transactions
+# Throw an error if user does not exist or invalid password.
+def sgvpusertransactionhistory(request):
+    # Check if user exist
+    entity = models.Customer.query(models.Customer.Cust_Nric == request.Cust_Nric).get()
+    if not entity:
+        # No entry with the NRIC detected in the db
+        # Invalid Request
+        response = 'Invalid User or User does not exist'
+    else:
+        # Entity is present
+        # Query the data
+        Transaction_entity = models.Transaction.query(models.Transaction.Trans_Nric == str(request.Cust_Nric))
+        Transaction_entity = Transaction_entity.order(-models.Transaction.Trans_Starttime)
+        Transaction_entity = Transaction_entity.fetch(int(request.Tran_Records))
+        response = 'Transaction Records Retrieved successfully'
     return response
 # ----------------------------------------------------------------------------------------
 
@@ -298,12 +325,10 @@ def sgvpupdatecreditcardinfo(request):
         # Entity is present
         # Check if the credit card already exist.
         card_found = None
-        card_count = 0
         for each_card in entity.Cust_Creditcard:
             if each_card.Card_Number == request.Card_Number:
                 # Credit Card already available
                 card_found = 1
-                card_count += 1
                 break
         # card_status
         if not card_found:
@@ -338,10 +363,10 @@ def sgvpdeletecreditcard(request):
         card_found = None
         card_count = 0
         for each_card in entity.Cust_Creditcard:
+            card_count += 1
             if each_card.Card_Number == request.Card_Number:
                 # Credit Card already available
                 card_found = 1
-                card_count += 1
                 break
         # card_status
         if not card_found:
@@ -417,10 +442,10 @@ def sgvpdeletevehicle(request):
         vehicle_count = 0
         # Check if the credit card already exist.
         for each_veh in entity.Cust_Creditcard:
+            vehicle_count += 1
             if each_veh.Veh_Regnumber == request.Veh_Regnumber:
                 # Vehicle already available
                 vehicle_found = 1
-                vehicle_count += 1
                 break
         # card_status
         if not vehicle_found:
@@ -455,7 +480,7 @@ def sgvpupdatecurrency(request):
         # Update User Amount.
         # Call LTA Server API
         amount_lta = 100
-        entity.Cust_Amount = int(amount_lta)
+        entity.Cust_Amount = float(amount_lta)
         entity.put()
         response = 'Amount Update Successful'
     return response
@@ -515,14 +540,14 @@ def sgvpstartcoupon(request):
         vehicle_count = 0
         veh_regnumber = None
         for each_veh in entity.Cust_Vehicle:
+            vehicle_count += 1
             if each_veh.Veh_Regnumber == request.Veh_Regnumber:
                 # Vehicle already available
                 vehicle_found = 1
-                vehicle_count += 1
                 veh_regnumber = each_veh.Veh_Regnumber
                 break
 
-        # card_status
+        # vehicle Status
         if not vehicle_found:
             # Vehicle not available in the database
             # Invalid Request
@@ -534,13 +559,13 @@ def sgvpstartcoupon(request):
             parking_timer = False
             updateparktimer = False
             # Duration in min
-            duration = request.duration
+            duration = request.Park_Duration
             # Coupon Type
             # 0 = Normal
             # 1 = CBD
             # 2 = Night
             # 3 = Full Day Parking
-            coupon_type = request.coupon
+            coupon_type = request.Park_Coupon
             duration_valid = (duration % 30)
             coupon_valid = (coupon_type < 4)
             if (0 == duration_valid) and coupon_valid:
@@ -563,14 +588,15 @@ def sgvpstartcoupon(request):
                 # Check if any coupon is active for the same vehicle
                 vehicle_status = None
                 vehicle_start_user = None
-                vehicle_entity = models.Transaction.query((models.Transaction.Trans_Regnumber == request.Veh_Regnumber)).get()
+                vehicle_entity = models.Transaction.query(ndb.AND(models.Transaction.Trans_Regnumber == str(request.Veh_Regnumber),
+                                                                  models.Transaction.Trans_Timerstatus == int(TIMER_ACTIVE))).get()
                 if not vehicle_entity:
                     # No Active transaction detected
                     vehicle_status = False
                 else:
                     # Active transaction detected
                     vehicle_status = True
-                    vehicle_start_user = vehicle_entity.Tran_Nric
+                    vehicle_start_user = vehicle_entity.Trans_Nric
 
                 # Check if coupon/timer window is open
                 if True == vehicle_status:
@@ -580,6 +606,7 @@ def sgvpstartcoupon(request):
                         # New request is from the same user
                         updateparktimer = True
                         start_timer = True
+                        response = 'Coupon already active.'
                     else:
                         # Already active from a different user
                         updateparktimer = False
@@ -592,7 +619,7 @@ def sgvpstartcoupon(request):
                         else:
                             # Coupon is inactive
                             # Check if coupon window is active
-                            if int(TIMER_ACTIVE) == vehicle_entity.Tran_Timerstatus:
+                            if int(TIMER_ACTIVE) == vehicle_entity.Trans_Timerstatus:
                                 # Timer still running Coupon window open
                                 # Transfer the current status
                                 start_timer = False
@@ -622,9 +649,14 @@ def sgvpstartcoupon(request):
                         # Update timer count.
                         timerthreads = threading.enumerate()
                         for timers in timerthreads:
+                            logging.debug(timers.getName())
                             if timers.getName() == veh_regnumber:
                                 # Vehicle timer thread found update
+
                                 timer_found = True
+                                # Update timer count
+                                timers.args.timercount += parking_timer
+                                logging.debug("Timer Thread")
                                 break
                             else:
                                 # Timer not fount start new timer
@@ -641,18 +673,20 @@ def sgvpstartcoupon(request):
                         user_set.timercount = int(parking_timer)
                         user_set.vehiclenumber = str(veh_regnumber)
                         user_set.accountuser = entity.Cust_Nric
-
-                        timer_entity = Timer(10, timerexpired_callback, (user_set,))
+                        timer_entity = Timer(int(DEF_TIMER_VALUE), timerexpired_callback, (user_set))
                         timer_entity.setName(veh_regnumber)
                         timer_entity.start()
-                        print "Timer Started", threading.enumerate()
-
-
+                        logging.debug("Timer Started")
+                        timerthreads = threading.enumerate()
+                        for timers in timerthreads:
+                            logging.debug(timers.getName())
+                            if timers.getName() == veh_regnumber:
+                                logging.debug("Timer Found")
 
                     # Credit Transaction
                     amount = entity.Cust_Amount
                     amount = amount - PARKING_PRICE[coupon_type]
-                    entity.Cust_Amount = int(amount)
+                    entity.Cust_Amount = float(amount)
                     entity.put()
 
                     # Log transaction
@@ -662,15 +696,12 @@ def sgvpstartcoupon(request):
                     entity_transaction.Trans_Chassisnumber = entity.Cust_Vehicle[vehicle_count - 1].Veh_Chassisnumber
                     entity_transaction.Trans_Enginenumber = entity.Cust_Vehicle[vehicle_count - 1].Veh_Enginenumber
                     entity_transaction.Trans_Amount = float(PARKING_PRICE[coupon_type])
-                    entity_transaction.Tran_Nric = entity.Cust_Nric
-                    entity_transaction.Tran_Timerstatus = int(TIMER_ACTIVE)
+                    entity_transaction.Trans_Nric = entity.Cust_Nric
+                    entity_transaction.Trans_Timerstatus = int(TIMER_ACTIVE)
                     time_stamp = datetime.utcnow()
-                    entity_transaction.Trans_Starttime = time_stamp.time()
+                    entity_transaction.Trans_Starttime = time_stamp
                     entity_transaction.Trans_Date = time_stamp.date()
-                    # entity_transaction.Trans_Stoptime = None
-                    # entity_transaction.Trans_Duration = None
                     entity_transaction.put()
-
                 else:
                     # No Valid Amount
                     response = 'Insufficient Balance'
@@ -680,9 +711,137 @@ def sgvpstartcoupon(request):
 # Method to stop the parking coupon
 # Throw an error if vehicle/user is invalid.
 def sgvpstopcoupon(request):
+    # Check if user exist
+    entity = models.Customer.query(models.Customer.Cust_Nric == request.Cust_Nric).get()
+    if not entity:
+        # No entry with the NRIC detected in the db
+        # Invalid Request
+        response = 'Invalid User or User does not exist'
+    else:
+        # User is Valid
+        # Check if the vehicle Reg number is valid.
+        vehicle_found = None
+        vehicle_count = 0
+        veh_regnumber = None
+        for each_veh in entity.Cust_Vehicle:
+            vehicle_count += 1
+            if each_veh.Veh_Regnumber == request.Veh_Regnumber:
+                # Vehicle already available
+                vehicle_found = 1
+                veh_regnumber = each_veh.Veh_Regnumber
+                break
 
-    return request
+         # vehicle Status
+        if not vehicle_found:
+            # Vehicle not available in the database
+            # Invalid Request
+            response = 'Invalid Vehicle or Vehicle Does Not Exists.'
+        else:
+            # Vehicle Present in Database
+            # Check if any coupon is active for the same vehicle
+            vehicle_entity = models.Transaction.query(ndb.AND(models.Transaction.Trans_Regnumber == str(request.Veh_Regnumber),
+                                                              models.Transaction.Trans_Stoptime == None)).get()
+            if not vehicle_entity:
+                # No Active transaction detected
+                response = 'No Active Parking Coupon'
+            else:
+                # Active transaction detected
+                # Search for the timer thread.
+                timerthreads = threading.enumerate()
+                for timers in timerthreads:
+                    if timers.getName() == str(veh_regnumber):
+                        # Vehicle timer thread found update
+                        # Update timer count
+                        timers.args[0].timercount = 0
+                        response = 'Parking Coupon Stopped Successfully'
+                        # Log Transaction.
+                        time_stamp = datetime.utcnow()
+                        vehicle_entity.Trans_Stoptime = time_stamp
+                        time_diff = time_stamp - vehicle_entity.Trans_Starttime
+                        vehicle_entity.Trans_Duration = int(time_diff.seconds)
+                        vehicle_entity.put()
+                        break
+                    else:
+                        # Timer not found
+                        response = 'Parking Coupon Has Expired'
+    return response
 
+
+# Method to renew the parking coupon
+# Throw an error if vehicle/user is invalid.
+def sgvprenewcoupon(request):
+    # Check if user exist
+    entity = models.Customer.query(models.Customer.Cust_Nric == request.Cust_Nric).get()
+    if not entity:
+        # No entry with the NRIC detected in the db
+        # Invalid Request
+        response = 'Invalid User or User does not exist'
+    else:
+        # User is Valid
+        # Check if the vehicle Reg number is valid.
+        vehicle_found = None
+        vehicle_count = 0
+        veh_regnumber = None
+        for each_veh in entity.Cust_Vehicle:
+            vehicle_count += 1
+            if each_veh.Veh_Regnumber == request.Veh_Regnumber:
+                # Vehicle already available
+                vehicle_found = 1
+                veh_regnumber = each_veh.Veh_Regnumber
+                break
+
+         # vehicle Status
+        if not vehicle_found:
+            # Vehicle not available in the database
+            # Invalid Request
+            response = 'Invalid Vehicle or Vehicle Does Not Exists.'
+        else:
+            # Vehicle Present in Database
+            # Validate Coupon type and amount.
+            # Duration in min
+            duration = request.Park_Duration
+            # Coupon Type: 0 = Normal, 1 = CBD, 2 = Night, 3 = Full Day Parking
+            coupon_type = request.Park_Coupon
+            duration_valid = (duration % 30)
+            coupon_valid = (coupon_type < 4)
+            if (0 == duration_valid) and coupon_valid:
+                # Coupon and Duration elements are valid
+                parking_amount = (duration/30)*PARKING_PRICE[coupon_type]
+                #Parking Timer
+                parking_timer = (duration/30)
+                # Balance check for the parking request
+                user_amount = entity.Cust_Amount
+                if float(parking_amount) <= float(user_amount):
+                    # Sufficient Amount available
+                    # Check if any coupon is active for the same vehicle
+                    vehicle_entity = models.Transaction.query(ndb.AND(models.Transaction.Trans_Regnumber == str(request.Veh_Regnumber),
+                                                                      models.Transaction.Trans_Stoptime == None)).get()
+                    if not vehicle_entity:
+                        # No Active transaction detected
+                        # Start New Timer
+                        response = 'Parking Coupon Has Expired'
+                    else:
+                        # Active transaction detected
+                        # Search for the timer thread.
+                        # Update the timer count
+                        timerthreads = threading.enumerate()
+                        for timers in timerthreads:
+                            if timers.getName() == str(veh_regnumber):
+                                # Vehicle timer thread found update
+                                # Update timer count
+                                timers.args[0].timercount += parking_timer
+                                response = 'Parking Coupon Renewed Successfully'
+                                break
+                            else:
+                                # Timer not found
+                                response = 'Parking Coupon Has Expired'
+                else:
+                    # Insufficient Amount
+                    response = 'Insufficient Balance. Please Top up.'
+            else:
+                # Invalid coupon or duration
+                response = 'Invalid Coupon or Duration.'
+    return response
 # ----------------------------------------------------------------------------------------
 
 
@@ -692,12 +851,11 @@ def sgvpstopcoupon(request):
 # Method to start the parking coupon
 # Throw an error if vehicle/user is invalid.
 def timerexpired_callback(*args, **kwargs):
-    print "Timer Expired", time.time(), args[0].vehiclenumber, args[0].timercount
+    # print "Timer Expired", time.time(), args[0].vehiclenumber, args[0].timercount
+    logging.debug("Call Back triggered")
     timerthreads = threading.enumerate()
     for timers in timerthreads:
-        print "*********************found*************************", timers.getName()
         if str(timers.getName()) == str(args[0].vehiclenumber):
-            print "*********************matched*************************", timers.getName()
             # Vehicle timer thread found
             # check timer counter
             if args[0].timercount > 0:
@@ -708,12 +866,14 @@ def timerexpired_callback(*args, **kwargs):
             if args[0].timercount == 0:
                 # stop the timer
                 timers.cancel()
+                del args[0]
             else:
                 # Restart the timer
                 timers.start()
 
             # Log transaction
-            vehicle_entity = models.Transaction.query((models.Transaction.Trans_Regnumber == str(args[0].vehiclenumber))).get()
+            vehicle_entity = models.Transaction.query(ndb.AND(models.Transaction.Trans_Regnumber == str(args[0].vehiclenumber),
+                                                              models.Transaction.Trans_Timerstatus == int(TIMER_ACTIVE))).get()
 
             if not vehicle_entity:
                 # No Active transaction detected
@@ -721,17 +881,23 @@ def timerexpired_callback(*args, **kwargs):
                 response = 'No Transaction'
             else:
                 # Log
-                vehicle_entity.Tran_Timerstatus = int(TIMER_EXPIRED)
-                print vehicle_entity.Tran_Nric+"************************"
+                print "***************************************Expired******************************"
                 if not vehicle_entity.Trans_Stoptime:
                     # Log stop time
                     time_stamp = datetime.utcnow()
-                    vehicle_entity.Trans_Stoptime = time_stamp.time()
+                    vehicle_entity.Trans_Stoptime = time_stamp
+                    time_diff = time_stamp - vehicle_entity.Trans_Starttime
+                    print time_diff.seconds
+                    vehicle_entity.Trans_Duration = int(time_diff.seconds)
                     vehicle_entity.put()
+                vehicle_entity.Trans_Timerstatus = int(TIMER_EXPIRED)
+                vehicle_entity.put()
         else:
             # Timer not fount start new timer
             response = 'Invalid Call Back'
     return response
+# ----------------------------------------------------------------------------------------
+
 
 # Method to add new user
 # Throw an error if user already exist
@@ -742,7 +908,11 @@ def sgvptestuser(request):
     request_coupon.Veh_Regnumber = str(10001)
     request_coupon.coupon = 0
     request_coupon.duration = 30
-    response = sgvpstartcoupon(request_coupon)
+    request_coupon.Tran_Records = 12
+    # response = sgvpstartcoupon(request_coupon)
+    # time.sleep(1)
+    # response = sgvpstopcoupon(request_coupon)
+    response = sgvpusertransactionhistory(request_coupon)
     a = 5
     #entity = models.Customer.get_by_key_name(queryString)
     # entity = models.Customer.query(models.Customer.Cust_Nric == queryString).get()

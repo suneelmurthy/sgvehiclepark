@@ -50,27 +50,9 @@ package="Registration"
 
 
 # ----------------------------------------------------------------------------------------
-#  Class definitions
-# ----------------------------------------------------------------------------------------
-class User(messages.Message):
-    Cust_Nric = messages.StringField(1)
-    Cust_Handphone = messages.IntegerField(3)
-    Cust_Password = messages.StringField(2)
-
-class NewUserRequest(messages.Message):
-  message = messages.StringField(1)
-
-class NewUserResponse(messages.Message):
-  items = messages.MessageField(NewUserRequest, 1, repeated=True)
-
-
-# ----------------------------------------------------------------------------------------
 #  Container parameter definition section
 # ----------------------------------------------------------------------------------------
-USER_RESPONSE = NewUserResponse(items=[])
-MULTIPLY_METHOD_RESOURCE = endpoints.ResourceContainer(
-    User
-    )
+
 
 
 # ----------------------------------------------------------------------------------------
@@ -79,13 +61,16 @@ MULTIPLY_METHOD_RESOURCE = endpoints.ResourceContainer(
 # ----------------------------------------------------------------------------------------
 #  Account Related Api's
 #  The Account API Endpoint shall include the following API's
-#  1)
-#  2)
-#  3)
-#  4)
-#  5)
-#  6)
-#  7)
+#  1) sgvpNewUserRegister
+#  2) sgvpUpdateUserInfo
+#  3) sgvpDeleteUser
+#  4) sgvpUserAuthentication
+#  5) sgvpUserTransactionHistory
+#  6) sgvpUpdateCreditCardInfo
+#  7) sgvpDeleteCreditCard
+#  8) sgvpNewVehicleRegister
+#  9) sgvpDeleteVehicle
+#  10) sgvpReadCurrency
 # ----------------------------------------------------------------------------------------
 
 # *************************************************************************
@@ -241,7 +226,7 @@ SGVPREADCURRENCY_REQCONTAINER = endpoints.ResourceContainer(
 # *************************************************************************
 #  API Definitions
 # *************************************************************************
-@endpoints.api(name='accountapi', version='v1')
+@endpoints.api(name='parkingusersapi', version='v1')
 class ParkingUsersApi(remote.Service):
 
     # ******************************************************************* #
@@ -392,53 +377,130 @@ class ParkingUsersApi(remote.Service):
     def sgvpReadCurrency(self, request):
         response = sgvpReadCurrencyResponseMsg()
         msg = config.sgvehiclepark.sgvpreadcurrency(request)
-#        response.ResponseMsg = msg
         data = json.loads(msg)
         response.Amount = data['Amount']
         response.ResponseMsg = data['ResponseMsg']
         return response
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+#  Parking Related Api's
+#  The Account API Endpoint shall include the following API's
+#  1) sgvpStartCoupon
+#  2) sgvpStopCoupon
+#  3) sgvpRenewCoupon
+# ----------------------------------------------------------------------------------------
 
 # *************************************************************************
-# sgvpNewUserRegister
+# Class Definition
 # *************************************************************************
-#     @endpoints.method(ID_RESOURCE, User,
-#                       path='user/{id}', http_method='GET',
-#                       name='getUser')
-#     def get_user(self, request):
-#         user = User();
-#         customer = config.sgvehiclepark.sgvpgetuserinfo(request)
-#         user.Cust_Nric = customer.Cust_Nric
-#         user.Cust_Password = customer.Cust_Password
-#         user.Cust_Handphone = customer.Cust_Handphone
-#         return user;
+# sgvpStartCoupon
+class sgvpStartCouponRequestMsg(messages.Message):
+    Cust_Nric = messages.StringField(1)
+    Veh_Regnumber = messages.StringField(2)
+    Park_Duration = messages.IntegerField(3)
+    Park_Coupon = messages.IntegerField(4)
+
+class sgvpStartCouponResponseMsg(messages.Message):
+    ResponseMsg = messages.StringField(1)
+
+
+# sgvpStopCoupon
+class sgvpStopCouponRequestMsg(messages.Message):
+    Cust_Nric = messages.StringField(1)
+    Veh_Regnumber = messages.StringField(2)
+
+class sgvpStopCouponResponseMsg(messages.Message):
+    ResponseMsg = messages.StringField(1)
+
+
+# sgvpRenewCoupon
+class sgvpRenewCouponRequestMsg(messages.Message):
+    Cust_Nric = messages.StringField(1)
+    Veh_Regnumber = messages.StringField(2)
+
+class sgvpRenewCouponResponseMsg(messages.Message):
+    ResponseMsg = messages.StringField(1)
+
+# *************************************************************************
+#  Container parameter definition section
+# *************************************************************************
+SGVPSTARTCOUPON_REQCONTAINER = endpoints.ResourceContainer(
+    sgvpStartCouponRequestMsg
+    )
+
+SGVPSTOPCOUPON_REQCONTAINER = endpoints.ResourceContainer(
+    sgvpStopCouponRequestMsg
+    )
+
+SGVPRENEWCOUPON_REQCONTAINER = endpoints.ResourceContainer(
+    sgvpRenewCouponRequestMsg
+    )
+
+# *************************************************************************
+#  API Definitions
+# *************************************************************************
+@endpoints.api(name='parkingcouponsapi', version='v1')
+class ParkingCouponsApi(remote.Service):
+
+    # ******************************************************************* #
+    # Method sgvpNewUserRegister
+    # ******************************************************************* #
+    @endpoints.method(SGVPSTARTCOUPON_REQCONTAINER,
+                      sgvpStartCouponResponseMsg,
+                      path='', http_method='POST',
+                      name='sgvpStartCoupon')
+
+    # Method Definition
+    def sgvpStartCoupon(self, request):
+        response = sgvpStartCouponResponseMsg()
+        msg = config.sgvehiclepark.sgvpstartcoupon(request)
+        response.ResponseMsg = msg
+        return response
+    # ******************************************************************* #
+
+
+    # ******************************************************************* #
+    # Method sgvpUpdateUserInfo
+    # ******************************************************************* #
+    @endpoints.method(SGVPSTOPCOUPON_REQCONTAINER,
+                      sgvpStopCouponResponseMsg,
+                      path='', http_method='POST',
+                      name='sgvpStopCoupon')
+    # ******************************************************************* #
+    # Method Definition
+    # ******************************************************************* #
+    def sgvpStopCoupon(self, request):
+        response = sgvpStopCouponResponseMsg()
+        msg = config.sgvehiclepark.sgvpstopcoupon(request)
+        response.ResponseMsg = msg
+        return response
+
+
+    # ******************************************************************* #
+    # Method sgvpRenewCoupon
+    # ******************************************************************* #
+    @endpoints.method(SGVPRENEWCOUPON_REQCONTAINER,
+                      sgvpRenewCouponResponseMsg,
+                      path='', http_method='POST',
+                      name='sgvpRenewCoupon')
+    # ******************************************************************* #
+    # Method Definition
+    # ******************************************************************* #
+    def sgvpRenewCoupon(self, request):
+        response = sgvpRenewCouponResponseMsg()
+        #msg = config.sgvehiclepark.sgvprenewcoupon(request)
+        response.ResponseMsg = 'Renew Coupon is not available, try again later'
+        return response
+# *************************************************************************
 
 
 
+# ----------------------------------------------------------------------------------------
+#  Application definitions
+# ----------------------------------------------------------------------------------------
+APPLICATION = endpoints.api_server([ParkingUsersApi, ParkingCouponsApi])
 
 
-@endpoints.api(name='parking', version='v1')
-class ParkingApi(remote.Service):
-
-    @endpoints.method(MULTIPLY_METHOD_RESOURCE, NewUserResponse,
-                    path='startParking', http_method='POST',
-                    name='')
-    def start_parking(self, request):
-        return NewUserResponse("Hi there...")
-
-    ID_RESOURCE = endpoints.ResourceContainer(
-      message_types.VoidMessage,
-      id=messages.IntegerField(1, variant=messages.Variant.INT32))
-
-    @endpoints.method(ID_RESOURCE, User,
-                    path='parking/{id}', http_method='GET',
-                    name='getUser')
-    def stop_parking(self, request):
-        try:
-            return User("Venkatesh")
-        except (IndexError, TypeError):
-            raise endpoints.NotFoundException('User %s not found.' %
-                                        (request.id,))
-
-
-
-APPLICATION = endpoints.api_server([ParkingUsersApi, ParkingApi])
+# ----------------------------------------------------------------------------------------
