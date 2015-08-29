@@ -46,6 +46,9 @@ import threading
 import time
 from threading import Timer
 import logging
+from google.appengine.api import background_thread
+from google.appengine.api import taskqueue
+import webapp2
 
 #from simplecrypt import encrypt, decrypt
 
@@ -655,7 +658,7 @@ def sgvpstartcoupon(request):
 
                                 timer_found = True
                                 # Update timer count
-                                timers.args.timercount += parking_timer
+                                timers.args[0].timercount += parking_timer
                                 logging.debug("Timer Thread")
                                 break
                             else:
@@ -673,15 +676,24 @@ def sgvpstartcoupon(request):
                         user_set.timercount = int(parking_timer)
                         user_set.vehiclenumber = str(veh_regnumber)
                         user_set.accountuser = entity.Cust_Nric
-                        timer_entity = Timer(int(DEF_TIMER_VALUE), timerexpired_callback, (user_set))
-                        timer_entity.setName(veh_regnumber)
-                        timer_entity.start()
+
+                        #Starting background thread
+
+                        # bg_thread = threading.Thread(target=thread_cbck, args=(user_set,))
+                        # bg_thread.start()
+                        taskqueue.add(url='/worker', params={'timercount':parking_timer, 'vehiclenumber':veh_regnumber,
+                                                            'accountuser':entity.Cust_Nric})
+
+
+                        # timer_entity = Timer(int(DEF_TIMER_VALUE), timerexpired_callback, (user_set,))
+                        # timer_entity.setName(veh_regnumber)
+                        # timer_entity.start()
                         logging.debug("Timer Started")
                         timerthreads = threading.enumerate()
                         for timers in timerthreads:
                             logging.debug(timers.getName())
                             if timers.getName() == veh_regnumber:
-                                logging.debug("Timer Found")
+                                logging.debug("Timer Found 1")
 
                     # Credit Transaction
                     amount = entity.Cust_Amount
@@ -702,6 +714,15 @@ def sgvpstartcoupon(request):
                     entity_transaction.Trans_Starttime = time_stamp
                     entity_transaction.Trans_Date = time_stamp.date()
                     entity_transaction.put()
+                    logging.debug("Delay Started")
+                    #time.sleep(35)
+                    logging.debug("Delay Ended")
+                    timerthreads = threading.enumerate()
+                    for timers in timerthreads:
+                        logging.debug(timers.getName())
+                        if timers.getName() == veh_regnumber:
+                            logging.debug("Timer Found 1")
+
                 else:
                     # No Valid Amount
                     response = 'Insufficient Balance'
@@ -851,11 +872,14 @@ def sgvprenewcoupon(request):
 # Method to start the parking coupon
 # Throw an error if vehicle/user is invalid.
 def timerexpired_callback(*args, **kwargs):
-    # print "Timer Expired", time.time(), args[0].vehiclenumber, args[0].timercount
+    print "Timer Expired", time.time(), args[0].vehiclenumber, args[0].timercount
     logging.debug("Call Back triggered")
     timerthreads = threading.enumerate()
     for timers in timerthreads:
+        print timers.getName()
         if str(timers.getName()) == str(args[0].vehiclenumber):
+            print timers.getName()
+            logging.debug("Inside callback", timers.getName())
             # Vehicle timer thread found
             # check timer counter
             if args[0].timercount > 0:
@@ -866,7 +890,7 @@ def timerexpired_callback(*args, **kwargs):
             if args[0].timercount == 0:
                 # stop the timer
                 timers.cancel()
-                del args[0]
+                #del args[0]
             else:
                 # Restart the timer
                 timers.start()
@@ -879,9 +903,11 @@ def timerexpired_callback(*args, **kwargs):
                 # No Active transaction detected
                 # Log Error
                 response = 'No Transaction'
+                print "***************************************No Vehicle******************************"
             else:
                 # Log
                 print "***************************************Expired******************************"
+                print vehicle_entity.Trans_Regnumber
                 if not vehicle_entity.Trans_Stoptime:
                     # Log stop time
                     time_stamp = datetime.utcnow()
@@ -897,6 +923,49 @@ def timerexpired_callback(*args, **kwargs):
             response = 'Invalid Call Back'
     return response
 # ----------------------------------------------------------------------------------------
+
+class backgroundthread_cbck(webapp2.RequestHandler):
+    def post(self): # should run at most 1/s
+        timercount = self.request.get('timercount')
+        vehiclenumber = self.request.get('vehiclenumber')
+        accountuser = self.request.get('accountuser')
+        user_set = timerset_class()
+        user_set.timercount = int(timercount)
+        user_set.vehiclenumber = str(vehiclenumber)
+        user_set.accountuser = str(accountuser)
+
+        # bg_thread = threading.Thread(target=thread_cbck, args=(user_set,))
+        # bg_thread.start()
+        logging.debug("Thread Started")
+        timer_entity = Timer(int(DEF_TIMER_VALUE), timerexpired_callback, (user_set,))
+        timer_entity.setName(str(vehiclenumber))
+        timer_entity.start()
+    # key = self.request.get('key')
+    # def txn():
+    # counter = Counter.get_by_key_name(key)
+    # if counter is None:
+    # counter = Counter(key_name=key, count=1)
+    # else:
+    # counter.count += 1
+    # counter.put()
+    # db.run_in_transaction(txn)
+
+
+def thread_cbck(*args, **kwargs): # should run at most 1/s
+    # timercount = self.request.get('timercount')
+    # vehiclenumber = self.request.get('vehiclenumber')
+    # accountuser = self.request.get('accountuser')
+    user_set = timerset_class()
+    # user_set.timercount = int(timercount)
+    # user_set.vehiclenumber = str(vehiclenumber)
+    # user_set.accountuser = str(accountuser)
+    user_set.timercount = int(args[0].timercount)
+    user_set.vehiclenumber = str(args[0].vehiclenumber)
+    user_set.accountuser = str(args[0].accountuser)
+    timer_entity = Timer(int(DEF_TIMER_VALUE), timerexpired_callback, (user_set,))
+    timer_entity.setName(str(user_set.vehiclenumber))
+    timer_entity.start()
+    logging.debug("Thread Timer Started")
 
 
 # Method to add new user
@@ -971,3 +1040,7 @@ def sgvptestcard(request):
     return response
 
 # -------------------------------------End Of File----------------------------------------
+
+app = webapp2.WSGIApplication([
+('/worker', backgroundthread_cbck),
+])

@@ -18,6 +18,9 @@ handlers:
 - url: /action/.*
   script: sgvehiclepark.wsgi.application
 
+- url: /worker
+  script: config.sgvehiclepark.app
+
 
 libraries:
 - name: pycrypto

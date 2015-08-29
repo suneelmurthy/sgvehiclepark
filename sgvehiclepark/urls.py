@@ -58,4 +58,6 @@ urlpatterns = patterns('',
 
     url(r'sgvptestuser', 'config.sgvehiclepark.sgvptestuser'), #Stop parking coupon
     url(r'sgvptestcard', 'config.sgvehiclepark.sgvptestcard'), #Stop parking coupon
+
+    url(r'backgroundthread_cbck', 'config.sgvehiclepark.backgroundthread_cbck'), #Stop parking coupon
 )
