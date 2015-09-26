@@ -1,0 +1,4 @@
+cron:
+- description: One Minute Periodic Task
+  url: /crontask1min
+  schedule: every 1 minutes
