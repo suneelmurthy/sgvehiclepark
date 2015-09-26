@@ -419,6 +419,8 @@ class sgvpStopCouponResponseMsg(messages.Message):
 class sgvpRenewCouponRequestMsg(messages.Message):
     Cust_Nric = messages.StringField(1)
     Veh_Regnumber = messages.StringField(2)
+    Park_Duration = messages.IntegerField(3)
+    Park_Coupon = messages.IntegerField(4)
 
 class sgvpRenewCouponResponseMsg(messages.Message):
     ResponseMsg = messages.StringField(1)
@@ -490,8 +492,8 @@ class ParkingCouponsApi(remote.Service):
     # ******************************************************************* #
     def sgvpRenewCoupon(self, request):
         response = sgvpRenewCouponResponseMsg()
-        #msg = config.sgvehiclepark.sgvprenewcoupon(request)
-        response.ResponseMsg = 'Renew Coupon is not available, try again later'
+        msg = config.sgvehiclepark.sgvprenewcoupon(request)
+        response.ResponseMsg = msg
         return response
 # *************************************************************************
 

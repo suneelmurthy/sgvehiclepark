@@ -42,16 +42,11 @@ import json
 from django import http
 from datetime import datetime
 import hashlib, binascii
-import threading
+import math
 import time
-from threading import Timer
 import logging
-from google.appengine.api import background_thread
-from google.appengine.api import taskqueue
 import webapp2
-
-#from simplecrypt import encrypt, decrypt
-
+from google.appengine.api import memcache
 
 
 # ----------------------------------------------------------------------------------------
@@ -524,11 +519,6 @@ def sgvpreadcurrency(request):
 def sgvpstartcoupon(request):
     # Variables
     amount_valid = None
-    duration = None
-    coupon_type = None
-    duration_valid = None
-    coupon_type = None
-    response = None
 
     # Check if user exist
     entity = models.Customer.query(models.Customer.Cust_Nric == request.Cust_Nric).get()
@@ -541,12 +531,11 @@ def sgvpstartcoupon(request):
         # Check if the vehicle Reg number is valid.
         vehicle_found = None
         vehicle_count = 0
-        veh_regnumber = None
         for each_veh in entity.Cust_Vehicle:
             vehicle_count += 1
             if each_veh.Veh_Regnumber == request.Veh_Regnumber:
                 # Vehicle already available
-                vehicle_found = 1
+                vehicle_found = True
                 veh_regnumber = each_veh.Veh_Regnumber
                 break
 
@@ -559,8 +548,7 @@ def sgvpstartcoupon(request):
             # Vehicle Present in Database
             # Variables
             start_timer = False
-            parking_timer = False
-            updateparktimer = False
+            parking_amount = 0.0
             # Duration in min
             duration = request.Park_Duration
             # Coupon Type
@@ -569,17 +557,14 @@ def sgvpstartcoupon(request):
             # 2 = Night
             # 3 = Full Day Parking
             coupon_type = request.Park_Coupon
-            duration_valid = (duration % 30)
+            duration_valid = (duration % 1)
             coupon_valid = (coupon_type < 4)
             if (0 == duration_valid) and coupon_valid:
                 # Coupon and Duration elements are valid
-                parking_amount = (duration/30)*PARKING_PRICE[coupon_type]
-
-                #Parking Timer
-                parking_timer = (duration/30)
+                # Update Code Later
+                parking_amount = (duration)*PARKING_PRICE[coupon_type]
 
                 # Balance check for the parking request
-                amount_valid = None
                 user_amount = entity.Cust_Amount
                 if parking_amount <= user_amount:
                     # Sufficient Amount available
@@ -589,115 +574,38 @@ def sgvpstartcoupon(request):
                     amount_valid = False
 
                 # Check if any coupon is active for the same vehicle
-                vehicle_status = None
-                vehicle_start_user = None
                 vehicle_entity = models.Transaction.query(ndb.AND(models.Transaction.Trans_Regnumber == str(request.Veh_Regnumber),
-                                                                  models.Transaction.Trans_Timerstatus == int(TIMER_ACTIVE))).get()
+                                                                  models.Transaction.Trans_Stoptime == None)).get()
                 if not vehicle_entity:
-                    # No Active transaction detected
-                    vehicle_status = False
-                else:
-                    # Active transaction detected
-                    vehicle_status = True
-                    vehicle_start_user = vehicle_entity.Trans_Nric
-
-                # Check if coupon/timer window is open
-                if True == vehicle_status:
-                    # Active transaction/window detected
-                    # check if the active request is from the same user
-                    if (vehicle_start_user == entity.Cust_Nric):
-                        # New request is from the same user
-                        updateparktimer = True
-                        start_timer = True
-                        response = 'Coupon already active.'
-                    else:
-                        # Already active from a different user
-                        updateparktimer = False
-                        # Check if coupon is active
-                        if not vehicle_entity.Trans_Stoptime:
-                            # Coupon is active
-                            # Invalid Request
-                            response = 'Coupon already active from a different user.'
-                            start_timer = False
-                        else:
-                            # Coupon is inactive
-                            # Check if coupon window is active
-                            if int(TIMER_ACTIVE) == vehicle_entity.Trans_Timerstatus:
-                                # Timer still running Coupon window open
-                                # Transfer the current status
-                                start_timer = False
-                            else:
-                                # Timer Coupon window expired
-                                # Start a new timer
-                                start_timer = True
-                            response = 'Coupon started successfully'
-                else:
                     # No active transaction detected
                     # start new timer
                     start_timer = True
                     response = 'Coupon started successfully'
+                else:
+                    # Active transaction detected
+                    start_timer = False
+                    vehicle_start_user = vehicle_entity.Trans_Nric
+                    if (vehicle_start_user == entity.Cust_Nric):
+                        # New request is from the same user
+                        response = 'Coupon already active.'
+                    else:
+                        # Already active from a different user
+                        response = 'Coupon already active from a different user.'
             else:
                 # Invalid coupon or duration
                 response = 'Invalid Coupon or Duration.'
 
+            # Timer Handling
             if True == start_timer:
                 # start timer
                 # variables
                 timer_found = False
                 if True == amount_valid:
                     # Valid Amount detected
-                    # Start Timer
-                    if updateparktimer == True:
-                        #  Already active window detected and active timer detected.
-                        # Update timer count.
-                        timerthreads = threading.enumerate()
-                        for timers in timerthreads:
-                            logging.debug(timers.getName())
-                            if timers.getName() == veh_regnumber:
-                                # Vehicle timer thread found update
-
-                                timer_found = True
-                                # Update timer count
-                                timers.args[0].timercount += parking_timer
-                                logging.debug("Timer Thread")
-                                break
-                            else:
-                                # Timer not fount start new timer
-                                timer_found = False
-                                # timer_entity = Timer(DEF_TIMER_VALUE, timerexpired_callback, int(parkingtimer))
-                                # timer_entity.setName(veh_regnumber)
-                                # timer_entity.start()
-
-                    # Timer status
-                    if timer_found != True:
-                        # start new timer
-                        # timer variable set
-                        user_set = timerset_class()
-                        user_set.timercount = int(parking_timer)
-                        user_set.vehiclenumber = str(veh_regnumber)
-                        user_set.accountuser = entity.Cust_Nric
-
-                        #Starting background thread
-
-                        # bg_thread = threading.Thread(target=thread_cbck, args=(user_set,))
-                        # bg_thread.start()
-                        taskqueue.add(url='/worker', params={'timercount':parking_timer, 'vehiclenumber':veh_regnumber,
-                                                            'accountuser':entity.Cust_Nric})
-
-
-                        # timer_entity = Timer(int(DEF_TIMER_VALUE), timerexpired_callback, (user_set,))
-                        # timer_entity.setName(veh_regnumber)
-                        # timer_entity.start()
-                        logging.debug("Timer Started")
-                        timerthreads = threading.enumerate()
-                        for timers in timerthreads:
-                            logging.debug(timers.getName())
-                            if timers.getName() == veh_regnumber:
-                                logging.debug("Timer Found 1")
 
                     # Credit Transaction
                     amount = entity.Cust_Amount
-                    amount = amount - PARKING_PRICE[coupon_type]
+                    amount = amount - parking_amount
                     entity.Cust_Amount = float(amount)
                     entity.put()
 
@@ -707,22 +615,28 @@ def sgvpstartcoupon(request):
                     entity_transaction.Trans_Regnumber = entity.Cust_Vehicle[vehicle_count - 1].Veh_Regnumber
                     entity_transaction.Trans_Chassisnumber = entity.Cust_Vehicle[vehicle_count - 1].Veh_Chassisnumber
                     entity_transaction.Trans_Enginenumber = entity.Cust_Vehicle[vehicle_count - 1].Veh_Enginenumber
-                    entity_transaction.Trans_Amount = float(PARKING_PRICE[coupon_type])
+                    entity_transaction.Trans_Amount = float(parking_amount)
                     entity_transaction.Trans_Nric = entity.Cust_Nric
+                    entity_transaction.Trans_Startduration = (request.Park_Duration * 60)
                     entity_transaction.Trans_Timerstatus = int(TIMER_ACTIVE)
                     time_stamp = datetime.utcnow()
                     entity_transaction.Trans_Starttime = time_stamp
                     entity_transaction.Trans_Date = time_stamp.date()
                     entity_transaction.put()
-                    logging.debug("Delay Started")
-                    #time.sleep(35)
-                    logging.debug("Delay Ended")
-                    timerthreads = threading.enumerate()
-                    for timers in timerthreads:
-                        logging.debug(timers.getName())
-                        if timers.getName() == veh_regnumber:
-                            logging.debug("Timer Found 1")
 
+                    # Mem cache handling
+                    entity_memcache = memcache.get("Transaction_Coupon")
+
+                    if not entity_memcache:
+                        transactionarray = []
+                        transactionarray.append(entity_transaction)
+                        memcache.set("Transaction_Coupon",transactionarray,1200)
+                    else:
+                        transactionarray = []
+                        for each_memset in entity_memcache:
+                            transactionarray.append(each_memset)
+                        transactionarray.append(entity_transaction)
+                        memcache.set("Transaction_Coupon",transactionarray,1200)
                 else:
                     # No Valid Amount
                     response = 'Insufficient Balance'
@@ -741,7 +655,7 @@ def sgvpstopcoupon(request):
     else:
         # User is Valid
         # Check if the vehicle Reg number is valid.
-        vehicle_found = None
+        vehicle_found = False
         vehicle_count = 0
         veh_regnumber = None
         for each_veh in entity.Cust_Vehicle:
@@ -767,26 +681,51 @@ def sgvpstopcoupon(request):
                 response = 'No Active Parking Coupon'
             else:
                 # Active transaction detected
-                # Search for the timer thread.
-                timerthreads = threading.enumerate()
-                for timers in timerthreads:
-                    if timers.getName() == str(veh_regnumber):
-                        # Vehicle timer thread found update
-                        # Update timer count
-                        timers.args[0].timercount = 0
-                        response = 'Parking Coupon Stopped Successfully'
-                        # Log Transaction.
-                        time_stamp = datetime.utcnow()
-                        vehicle_entity.Trans_Stoptime = time_stamp
-                        time_diff = time_stamp - vehicle_entity.Trans_Starttime
-                        vehicle_entity.Trans_Duration = int(time_diff.seconds)
-                        vehicle_entity.put()
-                        break
-                    else:
-                        # Timer not found
-                        response = 'Parking Coupon Has Expired'
-    return response
+                # Log the transaction
+                time_stamp = datetime.utcnow()
+                vehicle_entity.Trans_Stoptime = time_stamp
+                time_diff = time_stamp - vehicle_entity.Trans_Starttime
+                vehicle_entity.Trans_Stopduration = int(time_diff.seconds)
 
+                Trans_Amount = vehicle_entity.Trans_Amount
+                unit_cost = (Trans_Amount * 60)/vehicle_entity.Trans_Startduration
+                new_time = time_diff.seconds/60.0
+                units = math.ceil(float(new_time))
+                parking_amount = (units)*unit_cost
+
+                vehicle_entity.Trans_Amount = parking_amount
+                vehicle_entity.put()
+
+                # Credit Transactions
+                entity.Cust_Amount += Trans_Amount
+                amount = entity.Cust_Amount
+                amount = amount - parking_amount
+                entity.Cust_Amount = float(amount)
+                entity.put()
+
+                # Delete from Mem cache
+                entry_count = 0
+                entry_found = False
+                entity_memcache = memcache.get("Transaction_Coupon")
+                if entity_memcache:
+                    for each_memcache in entity_memcache:
+                        entry_count += 1
+                        if each_memcache.Trans_Regnumber == request.Veh_Regnumber:
+                            # Memcache Entry found
+                            entry_found = True
+                            break
+
+                    if entry_found == True:
+                        # Delete Memcache Entry
+                        del entity_memcache[entry_count-1]
+                        # Update mem cache
+                        if entity_memcache:
+                            memcache.set("Transaction_Coupon",entity_memcache,1200)
+                        else:
+                            memcache.delete("Transaction_Coupon")
+
+                response = 'Parking Coupon Stopped Successfully'
+    return response
 
 # Method to renew the parking coupon
 # Throw an error if vehicle/user is invalid.
@@ -808,7 +747,6 @@ def sgvprenewcoupon(request):
             if each_veh.Veh_Regnumber == request.Veh_Regnumber:
                 # Vehicle already available
                 vehicle_found = 1
-                veh_regnumber = each_veh.Veh_Regnumber
                 break
 
          # vehicle Status
@@ -823,13 +761,11 @@ def sgvprenewcoupon(request):
             duration = request.Park_Duration
             # Coupon Type: 0 = Normal, 1 = CBD, 2 = Night, 3 = Full Day Parking
             coupon_type = request.Park_Coupon
-            duration_valid = (duration % 30)
+            duration_valid = (duration % 1)
             coupon_valid = (coupon_type < 4)
             if (0 == duration_valid) and coupon_valid:
                 # Coupon and Duration elements are valid
-                parking_amount = (duration/30)*PARKING_PRICE[coupon_type]
-                #Parking Timer
-                parking_timer = (duration/30)
+                parking_amount = (duration)*PARKING_PRICE[coupon_type]
                 # Balance check for the parking request
                 user_amount = entity.Cust_Amount
                 if float(parking_amount) <= float(user_amount):
@@ -843,19 +779,35 @@ def sgvprenewcoupon(request):
                         response = 'Parking Coupon Has Expired'
                     else:
                         # Active transaction detected
-                        # Search for the timer thread.
-                        # Update the timer count
-                        timerthreads = threading.enumerate()
-                        for timers in timerthreads:
-                            if timers.getName() == str(veh_regnumber):
-                                # Vehicle timer thread found update
-                                # Update timer count
-                                timers.args[0].timercount += parking_timer
-                                response = 'Parking Coupon Renewed Successfully'
-                                break
-                            else:
-                                # Timer not found
-                                response = 'Parking Coupon Has Expired'
+
+                        #Credit Transaction
+                        amount = entity.Cust_Amount
+                        amount = amount - parking_amount
+                        entity.Cust_Amount = float(amount)
+                        entity.put()
+
+                        # Update Transaction entity
+                        vehicle_entity.Trans_Startduration += request.Park_Duration * 60
+                        vehicle_entity.Trans_Amount += parking_amount
+                        vehicle_entity.put()
+
+                        # Update Memcache
+                        memcache_count = 0
+                        entity_memcache = memcache.get("Transaction_Coupon")
+
+                        if entity_memcache:
+                            for each_memcache in entity_memcache:
+                                memcache_count += 1
+                                if each_memcache.Trans_Regnumber == str(request.Veh_Regnumber):
+                                    # Memcache entry found
+                                    # Update the entry
+                                    entity_memcache[memcache_count - 1] = vehicle_entity
+
+                                    # write memcache
+                                    memcache.set("Transaction_Coupon",entity_memcache,1200)
+
+                        # Response message
+                        response = 'Coupon Renewed Successfully.'
                 else:
                     # Insufficient Amount
                     response = 'Insufficient Balance. Please Top up.'
@@ -864,108 +816,6 @@ def sgvprenewcoupon(request):
                 response = 'Invalid Coupon or Duration.'
     return response
 # ----------------------------------------------------------------------------------------
-
-
-# ----------------------------------------------------------------------------------------
-#  Timer call back
-# ----------------------------------------------------------------------------------------
-# Method to start the parking coupon
-# Throw an error if vehicle/user is invalid.
-def timerexpired_callback(*args, **kwargs):
-    print "Timer Expired", time.time(), args[0].vehiclenumber, args[0].timercount
-    logging.debug("Call Back triggered")
-    timerthreads = threading.enumerate()
-    for timers in timerthreads:
-        print timers.getName()
-        if str(timers.getName()) == str(args[0].vehiclenumber):
-            print timers.getName()
-            logging.debug("Inside callback", timers.getName())
-            # Vehicle timer thread found
-            # check timer counter
-            if args[0].timercount > 0:
-                # decrement the timer
-                args[0].timercount -= 1
-
-            # Check if timer is to restarted
-            if args[0].timercount == 0:
-                # stop the timer
-                timers.cancel()
-                #del args[0]
-            else:
-                # Restart the timer
-                timers.start()
-
-            # Log transaction
-            vehicle_entity = models.Transaction.query(ndb.AND(models.Transaction.Trans_Regnumber == str(args[0].vehiclenumber),
-                                                              models.Transaction.Trans_Timerstatus == int(TIMER_ACTIVE))).get()
-
-            if not vehicle_entity:
-                # No Active transaction detected
-                # Log Error
-                response = 'No Transaction'
-                print "***************************************No Vehicle******************************"
-            else:
-                # Log
-                print "***************************************Expired******************************"
-                print vehicle_entity.Trans_Regnumber
-                if not vehicle_entity.Trans_Stoptime:
-                    # Log stop time
-                    time_stamp = datetime.utcnow()
-                    vehicle_entity.Trans_Stoptime = time_stamp
-                    time_diff = time_stamp - vehicle_entity.Trans_Starttime
-                    print time_diff.seconds
-                    vehicle_entity.Trans_Duration = int(time_diff.seconds)
-                    vehicle_entity.put()
-                vehicle_entity.Trans_Timerstatus = int(TIMER_EXPIRED)
-                vehicle_entity.put()
-        else:
-            # Timer not fount start new timer
-            response = 'Invalid Call Back'
-    return response
-# ----------------------------------------------------------------------------------------
-
-class backgroundthread_cbck(webapp2.RequestHandler):
-    def post(self): # should run at most 1/s
-        timercount = self.request.get('timercount')
-        vehiclenumber = self.request.get('vehiclenumber')
-        accountuser = self.request.get('accountuser')
-        user_set = timerset_class()
-        user_set.timercount = int(timercount)
-        user_set.vehiclenumber = str(vehiclenumber)
-        user_set.accountuser = str(accountuser)
-
-        # bg_thread = threading.Thread(target=thread_cbck, args=(user_set,))
-        # bg_thread.start()
-        logging.debug("Thread Started")
-        timer_entity = Timer(int(DEF_TIMER_VALUE), timerexpired_callback, (user_set,))
-        timer_entity.setName(str(vehiclenumber))
-        timer_entity.start()
-    # key = self.request.get('key')
-    # def txn():
-    # counter = Counter.get_by_key_name(key)
-    # if counter is None:
-    # counter = Counter(key_name=key, count=1)
-    # else:
-    # counter.count += 1
-    # counter.put()
-    # db.run_in_transaction(txn)
-
-
-def thread_cbck(*args, **kwargs): # should run at most 1/s
-    # timercount = self.request.get('timercount')
-    # vehiclenumber = self.request.get('vehiclenumber')
-    # accountuser = self.request.get('accountuser')
-    user_set = timerset_class()
-    # user_set.timercount = int(timercount)
-    # user_set.vehiclenumber = str(vehiclenumber)
-    # user_set.accountuser = str(accountuser)
-    user_set.timercount = int(args[0].timercount)
-    user_set.vehiclenumber = str(args[0].vehiclenumber)
-    user_set.accountuser = str(args[0].accountuser)
-    timer_entity = Timer(int(DEF_TIMER_VALUE), timerexpired_callback, (user_set,))
-    timer_entity.setName(str(user_set.vehiclenumber))
-    timer_entity.start()
-    logging.debug("Thread Timer Started")
 
 
 # Method to add new user
@@ -1041,6 +891,77 @@ def sgvptestcard(request):
 
 # -------------------------------------End Of File----------------------------------------
 
+
+# ----------------------------------------------------------------------------------------
+#  Periodic Cron Task
+# ----------------------------------------------------------------------------------------
+# Method to run cyclically every 1 minute
+# Method is responsible to monitor the parking coupon time and notify when the coupon is expired.
+class cron_task1min(webapp2.RequestHandler):
+    def post(self): # should run at most 1/s
+        print "Post", time.time()
+
+    def get(self):
+        entry_count = 0
+        delete_index = []
+
+        # Time Stamp
+        time_stamp = datetime.utcnow()
+        logging.debug("Cron Start", datetime.time())
+
+        # Read from memcache
+        entity_memcache = memcache.get("Transaction_Coupon")
+
+        if entity_memcache:
+            for each_memcache in entity_memcache:
+
+                # Time difference
+                time_diff = time_stamp - each_memcache.Trans_Starttime
+
+                # Check if timer has expired
+                if time_diff.seconds > each_memcache.Trans_Startduration:
+                    # Timer has expired
+                    # Stop the coupoun
+                    # Delete from memcache
+                    delete_index.append(int(entry_count))
+
+                    # Retrieve the transaction entity
+                    vehicle_entity = models.Transaction.query(ndb.AND(models.Transaction.Trans_Regnumber == str(each_memcache.Trans_Regnumber),
+                                                                      models.Transaction.Trans_Stoptime == None)).get()
+
+                    if vehicle_entity:
+                        # Active transaction detected
+                        # Log the transaction
+                        vehicle_entity.Trans_Stoptime = time_stamp
+                        vehicle_entity.Trans_Stopduration = vehicle_entity.Trans_Startduration
+                        vehicle_entity.put()
+
+                # loop counter
+                entry_count += 1
+
+        # Delete memcache entry
+        for i in sorted(delete_index, reverse=True):
+            del entity_memcache[i]
+
+        # Update mem cache
+        if entity_memcache:
+            memcache.set("Transaction_Coupon",entity_memcache,1200)
+        else:
+            memcache.delete("Transaction_Coupon")
+
+        # Logging
+        logging.debug("Cron End", datetime.time())
+
+
+# -----------------------------------End Of Cron File-------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# Cron Configuration
+# ----------------------------------------------------------------------------------------
 app = webapp2.WSGIApplication([
-('/worker', backgroundthread_cbck),
+# ('/worker', backgroundthread_cbck),
+('/crontask1min', cron_task1min),
 ])
+
+# -------------------------------End Of Cron Configuration--------------------------------

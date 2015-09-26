@@ -21,6 +21,9 @@ handlers:
 - url: /worker
   script: config.sgvehiclepark.app
 
+- url: /crontask1min
+  script: config.sgvehiclepark.app
+
 
 libraries:
 - name: pycrypto

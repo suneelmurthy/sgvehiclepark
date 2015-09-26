@@ -58,12 +58,13 @@ class Transaction(ndb.Model):
   	Trans_Regnumber = ndb.StringProperty(required=True)
   	Trans_Chassisnumber = ndb.StringProperty(required=True)
   	Trans_Enginenumber = ndb.StringProperty(required=True)
-  	Trans_Duration = ndb.IntegerProperty()
   	Trans_Amount = ndb.FloatProperty(required=True)
 	Trans_Nric = ndb.StringProperty(required=True)
-	Trans_Timerstatus = ndb.IntegerProperty()
 	Trans_Starttime = ndb.DateTimeProperty()
+  	Trans_Startduration = ndb.IntegerProperty()
 	Trans_Stoptime = ndb.DateTimeProperty()
+  	Trans_Stopduration = ndb.IntegerProperty()
+	Trans_Timerstatus = ndb.IntegerProperty()
 
 
 # Customer for Customer Details
