@@ -71,6 +71,7 @@ package="Registration"
 #  8) sgvpNewVehicleRegister
 #  9) sgvpDeleteVehicle
 #  10) sgvpReadCurrency
+#  11) sgvpUserCheck
 # ----------------------------------------------------------------------------------------
 
 # *************************************************************************
@@ -124,6 +125,22 @@ class sgvpUserTransactionHistoryRequestMsg(messages.Message):
 class sgvpUserTransactionHistoryResponseMsg(messages.Message):
     ResponseMsg = messages.StringField(1)
 
+# sgvpTransactionHistory
+class sgvpTransactionHistoryTable(messages.Message):
+    Date = messages.StringField(1)
+    Regnumber = messages.StringField(2)
+    Amount = messages.StringField(3)
+    Nric = messages.StringField(4)
+    Starttime = messages.StringField(5)
+    Stoptime = messages.StringField(6)
+    Stopduration = messages.StringField(7)
+    Location = messages.StringField(8)
+
+class sgvpTransactionHistoryResponseMsg(messages.Message):
+    ResponseData = messages.MessageField(sgvpTransactionHistoryTable,1,repeated = True)
+    ResponseMsg = messages.StringField(2)
+
+
 
 # sgvpUpdateCreditCardInfo
 class sgvpUpdateCreditCardInfoRequestMsg(messages.Message):
@@ -175,9 +192,13 @@ class sgvpReadCurrencyResponseMsg(messages.Message):
     Amount = messages.IntegerField(2)
 
 
-ID_RESOURCE = endpoints.ResourceContainer(
-              message_types.VoidMessage,
-              id=messages.StringField(1))
+# sgvpUserCheck
+class sgvpUserCheckRequestMsg(messages.Message):
+    Cust_Nric = messages.StringField(1)
+
+class sgvpUserCheckResponseMsg(messages.Message):
+    ResponseMsg = messages.StringField(1)
+
 
 # *************************************************************************
 #  Container parameter definition section
@@ -220,6 +241,10 @@ SGVPDELETEVEHICLE_REQCONTAINER = endpoints.ResourceContainer(
 
 SGVPREADCURRENCY_REQCONTAINER = endpoints.ResourceContainer(
     sgvpReadCurrencyRequestMsg
+    )
+
+SGVPUSERCHECK_REQCONTAINER = endpoints.ResourceContainer(
+    sgvpUserCheckRequestMsg
     )
 
 
@@ -381,6 +406,58 @@ class ParkingUsersApi(remote.Service):
         response.Amount = data['Amount']
         response.ResponseMsg = data['ResponseMsg']
         return response
+
+
+    # ******************************************************************* #
+    # Method sgvpReadCurrency
+    # ******************************************************************* #
+    @endpoints.method(SGVPUSERCHECK_REQCONTAINER,
+                      sgvpUserCheckResponseMsg,
+                      path='', http_method='POST',
+                      name='sgvpUserCheck')
+    # ******************************************************************* #
+    # Method Definition
+    # ******************************************************************* #
+    def sgvpUserCheck(self, request):
+        response = sgvpUserCheckResponseMsg()
+        msg = config.sgvehiclepark.sgvpusercheck(request)
+        response.ResponseMsg = msg
+        return response
+
+
+    # ******************************************************************* #
+    # Method sgvpTransactionHistory
+    # ******************************************************************* #
+    @endpoints.method(message_types.VoidMessage,
+                      sgvpTransactionHistoryResponseMsg,
+                      path='', http_method='GET',
+                      name='sgvpTransactionHistory')
+    # ******************************************************************* #
+    # Method Definition
+    # ******************************************************************* #
+    def sgvpTransactionHistory(self, unused_request):
+        response = sgvpTransactionHistoryResponseMsg()
+        response_data = sgvpTransactionHistoryTable()
+        response_msg = config.sgvehiclepark.sgvptransactionhistory()
+
+        if not response_msg:
+            # No valid entry found
+            response.ResponseMsg = "No Valid Data Available"
+        else:
+            # Valid entry found
+            response.ResponseMsg = "Valid Data Found"
+            for each_msg in response_msg:
+                response_data.Amount = str(each_msg.Trans_Amount)
+                response_data.Date = str(each_msg.Trans_Date)
+                response_data.Location = str(each_msg.Trans_Location)
+                response_data.Nric = str(each_msg.Trans_Nric)
+                response_data.Regnumber = str(each_msg.Trans_Regnumber)
+                response_data.Starttime = str(each_msg.Trans_Starttime)
+                response_data.Stoptime = str('Running') if not each_msg.Trans_Stoptime else str(each_msg.Trans_Stoptime)
+                response_data.Stopduration = str('Running') if not each_msg.Trans_Stoptime else str(each_msg.Trans_Stopduration)
+                response.ResponseData.append(response_data)
+        return response
+
 # ----------------------------------------------------------------------------------------
 
 
@@ -401,6 +478,8 @@ class sgvpStartCouponRequestMsg(messages.Message):
     Veh_Regnumber = messages.StringField(2)
     Park_Duration = messages.IntegerField(3)
     Park_Coupon = messages.IntegerField(4)
+    Park_Loclat = messages.FloatField(5)
+    Park_Loclong = messages.FloatField(6)
 
 class sgvpStartCouponResponseMsg(messages.Message):
     ResponseMsg = messages.StringField(1)

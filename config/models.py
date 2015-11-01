@@ -65,6 +65,7 @@ class Transaction(ndb.Model):
 	Trans_Stoptime = ndb.DateTimeProperty()
   	Trans_Stopduration = ndb.IntegerProperty()
 	Trans_Timerstatus = ndb.IntegerProperty()
+	Trans_Location = ndb.GeoPtProperty()
 
 
 # Customer for Customer Details

@@ -304,6 +304,41 @@ def sgvpusertransactionhistory(request):
         Transaction_entity = Transaction_entity.fetch(int(request.Tran_Records))
         response = 'Transaction Records Retrieved successfully'
     return response
+
+
+# Method to read out latest 10 transactions
+# Throw an error if user does not exist or invalid password.
+def sgvptransactionhistory():
+    # Check if user exist
+    Transaction_entity = models.Transaction.query().fetch()
+    # if not entity:
+    #     # No entry with the NRIC detected in the db
+    #     # Invalid Request
+    #     response = 'Invalid User or User does not exist'
+    # else:
+    #     # Entity is present
+    #     # Query the data
+
+    response = 'Invalid User or User does not exist'
+    # response = json.dumps(Transaction_entity)
+    return Transaction_entity
+
+
+# Method to read out if user is already registered
+# Throw an error if user does not exist or invalid password.
+def sgvpusercheck(request):
+    # Check if user exist
+    entity = models.Customer.query(models.Customer.Cust_Nric == request.Cust_Nric).get()
+    if not entity:
+        # No entry with the NRIC detected in the db
+        # User does not exist
+        response = 'Invalid User or User does not exist'
+    else:
+        # Entity is present
+        # User exist
+        response = 'User exist'
+    return response
+
 # ----------------------------------------------------------------------------------------
 
 
@@ -439,7 +474,7 @@ def sgvpdeletevehicle(request):
         vehicle_found = None
         vehicle_count = 0
         # Check if the credit card already exist.
-        for each_veh in entity.Cust_Creditcard:
+        for each_veh in entity.Cust_Vehicle:
             vehicle_count += 1
             if each_veh.Veh_Regnumber == request.Veh_Regnumber:
                 # Vehicle already available
@@ -622,6 +657,7 @@ def sgvpstartcoupon(request):
                     time_stamp = datetime.utcnow()
                     entity_transaction.Trans_Starttime = time_stamp
                     entity_transaction.Trans_Date = time_stamp.date()
+                    entity_transaction.Trans_Location = ndb.GeoPt(request.Park_Loclat, request.Park_Loclong)
                     entity_transaction.put()
 
                     # Mem cache handling
@@ -907,7 +943,8 @@ class cron_task1min(webapp2.RequestHandler):
 
         # Time Stamp
         time_stamp = datetime.utcnow()
-        logging.debug("Cron Start", datetime.time())
+        logging.debug('Cron Start')
+        logging.debug(datetime.utcnow())
 
         # Read from memcache
         entity_memcache = memcache.get("Transaction_Coupon")
@@ -950,7 +987,8 @@ class cron_task1min(webapp2.RequestHandler):
             memcache.delete("Transaction_Coupon")
 
         # Logging
-        logging.debug("Cron End", datetime.time())
+        logging.debug('Cron End')
+        logging.debug(datetime.utcnow())
 
 
 # -----------------------------------End Of Cron File-------------------------------------
