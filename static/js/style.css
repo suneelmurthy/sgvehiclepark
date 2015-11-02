@@ -16,7 +16,7 @@ html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockq
 }
 html { height: 101%; }
 body { 
-  background: #f0f0f0 url('images/bg.gif'); 
+  background: #f0f0f0;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   color: #313131;
   font-size: 62.5%; 
@@ -88,12 +88,12 @@ img { border: 0; max-width: 100%; }
 /** typography **/
 h1 {
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  font-size: 2.5em;
+  font-size: 3.5em;
   line-height: 1.5em;
   letter-spacing: -0.05em;
   margin-bottom: 20px;
   padding: .1em 0;
-  color: #444;
+  color: #000;
 	position: relative;
 	overflow: hidden;
 	white-space: nowrap;
@@ -229,3 +229,39 @@ a:hover { text-decoration: underline; }
 .autocomplete-suggestion { padding: 10px 5px; font-size: 1.2em; white-space: nowrap; overflow: hidden; }
 .autocomplete-selected { background: #f0f0f0; }
 .autocomplete-suggestions strong { font-weight: normal; color: #3399ff; }
+
+
+
+SSTableGenerator {
+	margin:0px;padding:0px;
+	/*width:75%;*/
+	box-shadow: 10px 10px 5px #888888;
+	border:1px solid #11f4bf;
+}.CSSTableGenerator table{
+    border-collapse: collapse;
+        border-spacing: 0;
+	margin:10px;padding:10px;
+}
+.CSSTableGenerator td{
+	vertical-align:middle;
+	background-color:#ebebeb;
+	border:1px solid #000000;
+	border-width:1px;
+	text-align:center;
+	padding:7px;
+	font-size:14px;
+	font-family:Arial;
+	font-weight:normal;
+	color:#37876E;
+}
+
+.firstrow td {
+	background-color:#37876E;
+	border:1px solid #000000;
+	text-align:center;
+	border-width:1px;
+	font-size:16px;
+	font-family:Verdana;
+	font-weight:bold;
+	color:#ebebeb;
+}

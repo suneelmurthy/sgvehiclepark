@@ -117,15 +117,6 @@ class sgvpUserAuthenticationResponseMsg(messages.Message):
 
 
 # sgvpUserTransactionHistory
-class sgvpUserTransactionHistoryRequestMsg(messages.Message):
-    Cust_FirstName = messages.StringField(1)
-    Cust_LastName = messages.IntegerField(3)
-    Cust_Email = messages.StringField(2)
-
-class sgvpUserTransactionHistoryResponseMsg(messages.Message):
-    ResponseMsg = messages.StringField(1)
-
-# sgvpTransactionHistory
 class sgvpTransactionHistoryTable(messages.Message):
     Date = messages.StringField(1)
     Regnumber = messages.StringField(2)
@@ -136,6 +127,14 @@ class sgvpTransactionHistoryTable(messages.Message):
     Stopduration = messages.StringField(7)
     Location = messages.StringField(8)
 
+class sgvpUserTransactionHistoryRequestMsg(messages.Message):
+    Cust_Nric = messages.StringField(1)
+
+class sgvpUserTransactionHistoryResponseMsg(messages.Message):
+    ResponseData = messages.MessageField(sgvpTransactionHistoryTable,1,repeated = True)
+    ResponseMsg = messages.StringField(2)
+
+# sgvpTransactionHistory
 class sgvpTransactionHistoryResponseMsg(messages.Message):
     ResponseData = messages.MessageField(sgvpTransactionHistoryTable,1,repeated = True)
     ResponseMsg = messages.StringField(2)
@@ -182,6 +181,19 @@ class sgvpDeleteVehicleRequestMsg(messages.Message):
 class sgvpDeleteVehicleResponseMsg(messages.Message):
     ResponseMsg = messages.StringField(1)
 
+# sgvpReadVehicle
+class sgvpReadVehicleTable(messages.Message):
+    Veh_Regnumber = messages.StringField(2)
+    Veh_Type = messages.StringField(3)
+    Veh_Chassisnumber = messages.StringField(4)
+    Veh_Enginenumber = messages.StringField(5)
+
+class sgvpReadVehicleRequestMsg(messages.Message):
+    Cust_Nric = messages.StringField(1)
+
+class sgvpReadVehicleResponseMsg(messages.Message):
+    ResponseMsg = messages.StringField(1)
+    ResponseData = messages.MessageField(sgvpReadVehicleTable,2,repeated=True)
 
 # sgvpReadCurrency
 class sgvpReadCurrencyRequestMsg(messages.Message):
@@ -239,6 +251,10 @@ SGVPDELETEVEHICLE_REQCONTAINER = endpoints.ResourceContainer(
     sgvpDeleteVehicleRequestMsg
     )
 
+SGVPREADVEHICLE_REQCONTAINER = endpoints.ResourceContainer(
+    sgvpReadVehicleRequestMsg
+    )
+
 SGVPREADCURRENCY_REQCONTAINER = endpoints.ResourceContainer(
     sgvpReadCurrencyRequestMsg
     )
@@ -247,6 +263,9 @@ SGVPUSERCHECK_REQCONTAINER = endpoints.ResourceContainer(
     sgvpUserCheckRequestMsg
     )
 
+SGVPUSERTRANSACTIONHISTORY_REQCONTAINER = endpoints.ResourceContainer(
+    sgvpUserTransactionHistoryRequestMsg
+    )
 
 # *************************************************************************
 #  API Definitions
@@ -390,6 +409,36 @@ class ParkingUsersApi(remote.Service):
 
 
     # ******************************************************************* #
+    # Method gvpReadVehicle
+    # ******************************************************************* #
+    @endpoints.method(SGVPREADVEHICLE_REQCONTAINER,
+                      sgvpReadVehicleResponseMsg,
+                      path='', http_method='POST',
+                      name='sgvpReadVehicle')
+    # ******************************************************************* #
+    # Method Definition
+    # ******************************************************************* #
+    def sgvpReadVehicle(self, request):
+        response = sgvpReadVehicleResponseMsg()
+        response_data = sgvpReadVehicleTable()
+        response_msg = config.sgvehiclepark.sgvpreadvehicle(request)
+
+        if not response_msg:
+            # No valid entry found
+            response.ResponseMsg = "No Vehicles found"
+        else:
+            # Valid entry found
+            response.ResponseMsg = "Vehicle Found"
+            for each_msg in response_msg:
+                response_data.Veh_Chassisnumber = str(each_msg.Veh_Chassisnumber)
+                response_data.Veh_Enginenumber = str(each_msg.Veh_Enginenumber)
+                response_data.Veh_Regnumber = str(each_msg.Veh_Regnumber)
+                response_data.Veh_Type = str(each_msg.Veh_Type)
+                response.ResponseData.append(response_data)
+        return response
+
+
+    # ******************************************************************* #
     # Method sgvpReadCurrency
     # ******************************************************************* #
     @endpoints.method(SGVPREADCURRENCY_REQCONTAINER,
@@ -426,6 +475,40 @@ class ParkingUsersApi(remote.Service):
 
 
     # ******************************************************************* #
+    # Method sgvpUserTransactionHistoryRequestMsg
+    # ******************************************************************* #
+    @endpoints.method(SGVPUSERTRANSACTIONHISTORY_REQCONTAINER,
+                      sgvpUserTransactionHistoryResponseMsg,
+                      path='', http_method='POST',
+                      name='sgvpUserTransactionHistory')
+    # ******************************************************************* #
+    # Method Definition
+    # ******************************************************************* #
+    def sgvpUserTransactionHistory(self, request):
+        response = sgvpUserTransactionHistoryResponseMsg()
+        response_data = sgvpTransactionHistoryTable()
+        response_msg = config.sgvehiclepark.sgvpusertransactionhistory(request)
+
+        if not response_msg:
+            # No valid entry found
+            response.ResponseMsg = "No Valid Data Available"
+        else:
+            # Valid entry found
+            response.ResponseMsg = "Valid Data Available"
+            for each_msg in response_msg:
+                response_data.Amount = str(each_msg.Trans_Amount)
+                response_data.Date = str(each_msg.Trans_Date)
+                response_data.Location = str(each_msg.Trans_Location)
+                response_data.Nric = str(each_msg.Trans_Nric)
+                response_data.Regnumber = str(each_msg.Trans_Regnumber)
+                response_data.Starttime = str(each_msg.Trans_Starttime.time())
+                response_data.Stoptime = str('Running') if not each_msg.Trans_Stoptime else str(each_msg.Trans_Stoptime.time())
+                response_data.Stopduration = str('Running') if not each_msg.Trans_Stopduration else str(each_msg.Trans_Stopduration)
+                response.ResponseData.append(response_data)
+        return response
+
+
+    # ******************************************************************* #
     # Method sgvpTransactionHistory
     # ******************************************************************* #
     @endpoints.method(message_types.VoidMessage,
@@ -445,16 +528,17 @@ class ParkingUsersApi(remote.Service):
             response.ResponseMsg = "No Valid Data Available"
         else:
             # Valid entry found
-            response.ResponseMsg = "Valid Data Found"
+            response.ResponseMsg = "Valid Data Available"
             for each_msg in response_msg:
+                response_data = sgvpTransactionHistoryTable()
                 response_data.Amount = str(each_msg.Trans_Amount)
                 response_data.Date = str(each_msg.Trans_Date)
                 response_data.Location = str(each_msg.Trans_Location)
                 response_data.Nric = str(each_msg.Trans_Nric)
                 response_data.Regnumber = str(each_msg.Trans_Regnumber)
-                response_data.Starttime = str(each_msg.Trans_Starttime)
-                response_data.Stoptime = str('Running') if not each_msg.Trans_Stoptime else str(each_msg.Trans_Stoptime)
-                response_data.Stopduration = str('Running') if not each_msg.Trans_Stoptime else str(each_msg.Trans_Stopduration)
+                response_data.Starttime = str(each_msg.Trans_Starttime.time())
+                response_data.Stoptime = str('Running') if not each_msg.Trans_Stoptime else str(each_msg.Trans_Stoptime.time())
+                response_data.Stopduration = str('Running') if not each_msg.Trans_Stopduration else str(each_msg.Trans_Stopduration)
                 response.ResponseData.append(response_data)
         return response
 

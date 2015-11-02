@@ -55,94 +55,90 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Hello Endpoints!</title>
-    <script async src="/static/js/base.js"></script>
-    <link rel="stylesheet" href="/bootstrap/css/bootstrap.css">
-    <link rel="stylesheet" href="/bootstrap/css/bootstrap-responsive.css">
-    <style>
-        body {
-            padding-top: 40px;
-            padding-bottom: 40px;
-            background-color: #f5f5f5;
-        }
-        blockquote {
-            margin-bottom: 10px;
-            border-left-color: #bbb;
-        }
-        form {
-            margin-top: 10px;
-        }
-        form label {
-          width: 90px;
-          display: inline-block;
-        }
-        .form-signin input[type="text"] {
-            font-size: 16px;
-            height: auto;
-            margin-bottom: 15px;
-            padding: 7px 9px;
-        }
-        .row {
-            margin-left: 0px;
-            margin-top: 10px;
-            overflow: scroll;
-        }
-    </style>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5/jquery.min.js"></script>
+    <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+    <link rel="stylesheet" type="text/css" media="all" href="js/style.css">
+
 </head>
+
 <body>
-<div class="navbar navbar-inverse navbar-fixed-top">
-    <div class="navbar-inner">
-        <div class="container">
-            <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="brand" href="#">Hello Endpoints!</a>
-        </div>
-    </div>
+
+    <div align="center">
+<h1>Parking Transaction Table</h1>
 </div>
 
-<div class="container">
 
-    <output id="outputLog"></output>
+<div align="center" class="CSSTableGenerator" >
+<table id="mixed">
+<tr class="firstrow">
+    <td>Date</td>
+    <td>Nric</td>
+    <td>Vehicle Number </td>
+    <td>Location</td>
+    <td>Amount</td>
+    <td>Start Time </td>
+    <td>Stop Time</td>
+    <td>Duration</td>
+</tr>
 
-    <form onsubmit="return false;">
-        <h2>Get Greeting</h2>
-        <div><label for="id">Greeting ID:</label><input id="id" /></div>
-        <div><input id="getGreeting" type="submit" class="btn btn-small" value="Submit"></div>
-    </form>
+</table>
+</div>
 
-    <form onsubmit="return false;">
-        <h2>List Greetings</h2>
-        <div><input id="listGreeting" type="submit" class="btn btn-small" value="Submit"></div>
-    </form>
-    <form onsubmit="return false;">
-        <h2>Multiply Greetings</h2>
-        <div><label for="greeting">Greeting:</label><input id="greeting" /></div>
-        <div><label for="count">Count:</label><input id="count" /></div>
-        <div><input id="multiplyGreetings" type="submit" class="btn btn-small" value="Submit"></div>
-    </form>
+
+
     <script>
         function init() {
-//            alert('loaded');
             var ROOT = 'https://sgvehiclepark.appspot.com/_ah/api';
             gapi.client.load('parkingusersapi', 'v1', function() {
-//                alert('Client loaded');
-//                gapi.client.parkingusersapi.sgvpNewUserRegister({'Cust_Handphone': '82852567','Cust_Nric': 'user1006','Cust_Password': 'User1006'}).execute(function(resp) {
-////                    alert('Inside API Call');
-//                    alert(resp.ResponseMsg);
-//                    console.log(resp);
-//                });
                 gapi.client.parkingusersapi.sgvpTransactionHistory().execute(function(resp) {
 //                    alert('Inside API Call');
-                    alert(resp.ResponseMsg);
-                    console.log(resp);
+//                    alert(resp.ResponseMsg);
+                    if(resp.ResponseMsg == "Valid Data Available")
+                    {
+                        row = new Array(resp.ResponseData.length);
+                        var mixed = document.getElementById("mixed");
+                        // IE7 only supports appending rows to tbody
+                        var tbody = document.createElement("tbody");
+
+                        for (var i=0; i < resp.ResponseData.length; i++)
+                        {
+                            row[i] = new Array(8);
+                            row[i][0] = resp.ResponseData[i].Date;
+                            row[i][1] = resp.ResponseData[i].Nric;
+                            row[i][2] = resp.ResponseData[i].Regnumber;
+                            row[i][3] = resp.ResponseData[i].Location;
+                            row[i][4] = resp.ResponseData[i].Amount;
+                            row[i][5] = resp.ResponseData[i].Starttime;
+                            row[i][6] = resp.ResponseData[i].Stoptime;
+                            row[i][7] = resp.ResponseData[i].Stopduration;
+
+                            // Table Entry
+                            var tr = document.createElement("tr");
+                            for (var j = 0; j < row[i].length; j++) {
+                               var td = document.createElement("td");
+                               var txt = document.createTextNode(row[i][j]);
+                               td.appendChild(txt);
+                               tr.appendChild(td);
+                            }
+
+                            // append row to table
+                            // IE7 requires append row to tbody, append tbody to table
+                            tbody.appendChild(tr);
+                            mixed.appendChild(tbody);
+                        }
+                    }
+                    else
+                    {
+
+                    }
+
+//                    console.log(resp);
                 });
             }, ROOT);
         }
     </script>
     <script src="https://apis.google.com/js/client.js?onload=init"></script>
-</div>
+
+
 </body>
 </html>

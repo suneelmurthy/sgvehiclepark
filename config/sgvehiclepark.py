@@ -295,32 +295,21 @@ def sgvpusertransactionhistory(request):
     if not entity:
         # No entry with the NRIC detected in the db
         # Invalid Request
-        response = 'Invalid User or User does not exist'
+        Transaction_entity = None
     else:
         # Entity is present
         # Query the data
         Transaction_entity = models.Transaction.query(models.Transaction.Trans_Nric == str(request.Cust_Nric))
         Transaction_entity = Transaction_entity.order(-models.Transaction.Trans_Starttime)
-        Transaction_entity = Transaction_entity.fetch(int(request.Tran_Records))
-        response = 'Transaction Records Retrieved successfully'
-    return response
+        # Transaction_entity = Transaction_entity.fetch(int(request.Tran_Records))
+    return Transaction_entity
 
 
 # Method to read out latest 10 transactions
 # Throw an error if user does not exist or invalid password.
 def sgvptransactionhistory():
-    # Check if user exist
+    #Read transaction table
     Transaction_entity = models.Transaction.query().fetch()
-    # if not entity:
-    #     # No entry with the NRIC detected in the db
-    #     # Invalid Request
-    #     response = 'Invalid User or User does not exist'
-    # else:
-    #     # Entity is present
-    #     # Query the data
-
-    response = 'Invalid User or User does not exist'
-    # response = json.dumps(Transaction_entity)
     return Transaction_entity
 
 
@@ -492,6 +481,25 @@ def sgvpdeletevehicle(request):
             entity.put()
             response = 'Vehicle Deleted Successfully'
     return response
+
+
+# Method to read vehicle information
+# Throw an error if user is invalid.
+def sgvpreadvehicle(request):
+    #check if user exists
+    entity = models.Customer.query(models.Customer.Cust_Nric == request.Cust_Nric).get()
+    if not entity:
+        # No entry with the NRIC detected in the db
+        # Invalid Request
+        returndata = None
+    else:
+        # User is Valid
+        if not entity.Cust_Vehicle:
+            returndata = None
+        else:
+            returndata = entity.Cust_Vehicle
+
+    return returndata
 # ----------------------------------------------------------------------------------------
 
 
