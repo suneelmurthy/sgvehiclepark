@@ -520,7 +520,6 @@ class ParkingUsersApi(remote.Service):
     # ******************************************************************* #
     def sgvpTransactionHistory(self, unused_request):
         response = sgvpTransactionHistoryResponseMsg()
-        response_data = sgvpTransactionHistoryTable()
         response_msg = config.sgvehiclepark.sgvptransactionhistory()
 
         if not response_msg:
@@ -588,6 +587,15 @@ class sgvpRenewCouponRequestMsg(messages.Message):
 class sgvpRenewCouponResponseMsg(messages.Message):
     ResponseMsg = messages.StringField(1)
 
+
+# sgvpReadActiveCouponRequestMsg
+class sgvpReadActiveCouponRequestMsg(messages.Message):
+    Cust_Nric = messages.StringField(1)
+
+class sgvpReadActiveCouponResponseMsg(messages.Message):
+    ResponseData = messages.MessageField(sgvpTransactionHistoryTable,1,repeated = True)
+    ResponseMsg = messages.StringField(2)
+
 # *************************************************************************
 #  Container parameter definition section
 # *************************************************************************
@@ -601,6 +609,10 @@ SGVPSTOPCOUPON_REQCONTAINER = endpoints.ResourceContainer(
 
 SGVPRENEWCOUPON_REQCONTAINER = endpoints.ResourceContainer(
     sgvpRenewCouponRequestMsg
+    )
+
+SGVPREADACTIVECOUPON_REQCONTAINER = endpoints.ResourceContainer(
+    sgvpReadActiveCouponRequestMsg
     )
 
 # *************************************************************************
@@ -658,6 +670,41 @@ class ParkingCouponsApi(remote.Service):
         msg = config.sgvehiclepark.sgvprenewcoupon(request)
         response.ResponseMsg = msg
         return response
+
+
+    # ******************************************************************* #
+    # Method sgvpReadActiveCoupon
+    # ******************************************************************* #
+    @endpoints.method(SGVPREADACTIVECOUPON_REQCONTAINER,
+                      sgvpReadActiveCouponResponseMsg,
+                      path='', http_method='POST',
+                      name='sgvpReadActiveCoupon')
+    # ******************************************************************* #
+    # Method Definition
+    # ******************************************************************* #
+    def sgvpReadActiveCoupon(self, request):
+        response = sgvpReadActiveCouponResponseMsg()
+        response_msg = config.sgvehiclepark.sgvpreadactivecoupon(request)
+        if not response_msg:
+            # No valid entry found
+            response.ResponseMsg = "No Valid Data Available"
+        else:
+            # Valid entry found
+            response.ResponseMsg = "Valid Data Available"
+            for each_msg in response_msg:
+                response_data = sgvpTransactionHistoryTable()
+                response_data.Amount = str(each_msg.Trans_Amount)
+                response_data.Date = str(each_msg.Trans_Date)
+                response_data.Location = str(each_msg.Trans_Location)
+                response_data.Nric = str(each_msg.Trans_Nric)
+                response_data.Regnumber = str(each_msg.Trans_Regnumber)
+                response_data.Starttime = str(each_msg.Trans_Starttime.time())
+                response_data.Stoptime = str('Running') if not each_msg.Trans_Stoptime else str(each_msg.Trans_Stoptime.time())
+                response_data.Stopduration = str('Running') if not each_msg.Trans_Stopduration else str(each_msg.Trans_Stopduration)
+                response.ResponseData.append(response_data)
+        return response
+
+
 # *************************************************************************
 
 

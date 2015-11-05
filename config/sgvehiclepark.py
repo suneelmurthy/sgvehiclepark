@@ -300,7 +300,7 @@ def sgvpusertransactionhistory(request):
         # Entity is present
         # Query the data
         Transaction_entity = models.Transaction.query(models.Transaction.Trans_Nric == str(request.Cust_Nric))
-        Transaction_entity = Transaction_entity.order(-models.Transaction.Trans_Starttime)
+        Transaction_entity = Transaction_entity.order(-models.Transaction.Trans_Starttime).fetch()
         # Transaction_entity = Transaction_entity.fetch(int(request.Tran_Records))
     return Transaction_entity
 
@@ -859,6 +859,30 @@ def sgvprenewcoupon(request):
                 # Invalid coupon or duration
                 response = 'Invalid Coupon or Duration.'
     return response
+
+# Method to read the active user parking coupon
+# Throw an error if user is invalid.
+def sgvpreadactivecoupon(request):
+    # Check if user exist
+    entity = models.Customer.query(models.Customer.Cust_Nric == request.Cust_Nric).get()
+    if not entity:
+        # No entry with the NRIC detected in the db
+        # Invalid Request
+        vehicle_entity = None
+    else:
+        vehicle_entity = models.Transaction.query(ndb.AND(models.Transaction.Trans_Nric == str(request.Cust_Nric),
+                                                          models.Transaction.Trans_Stoptime == None)).fetch()
+    #     responsemsg = 'Valid User'
+    #
+    # response = {
+    #     'vehicle_entity' : vehicle_entity,
+    #     'ResponseMsg' : responsemsg
+    # }
+
+    # response = json.dumps(response)
+    return vehicle_entity
+
+
 # ----------------------------------------------------------------------------------------
 
 
