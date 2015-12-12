@@ -86,6 +86,25 @@ class sgvpNewUserRegisterRequestMsg(messages.Message):
 class sgvpNewUserRegisterResponseMsg(messages.Message):
     ResponseMsg = messages.StringField(1)
 
+# sgvpGetUserInfo
+class sgvpVehicleTable(messages.Message):
+    Veh_Regnumber = messages.StringField(1)
+    Veh_Type = messages.StringField(2)
+    Veh_Chassisnumber = messages.StringField(3)
+    Veh_Enginenumber = messages.StringField(4)
+
+class sgvpGetUserInfoRequestMsg(messages.Message):
+    Cust_Nric = messages.StringField(1)
+
+class sgvpGetUserInfoResponseMsg(messages.Message):
+    ResponseMsg = messages.StringField(1)
+    Cust_Nric = messages.StringField(2)
+    Cust_Handphone = messages.IntegerField(3)
+    Cust_Amount = messages.FloatField(4)
+    Cust_FirstName = messages.StringField(5)
+    Cust_LastName = messages.StringField(6)
+    Cust_Email = messages.StringField(7)
+    Cust_Vehicle = messages.MessageField(sgvpVehicleTable,8,repeated=True)
 
 # sgvpUpdateUserInfo
 class sgvpUpdateUserInfoRequestMsg(messages.Message):
@@ -223,6 +242,10 @@ SGVPUPDATEUSERINFO_REQCONTAINER = endpoints.ResourceContainer(
     sgvpUpdateUserInfoRequestMsg
     )
 
+SGVPGETUSERINFO_REQCONTAINER = endpoints.ResourceContainer(
+    sgvpGetUserInfoRequestMsg
+    )
+
 SGVPDELETEUSER_REQCONTAINER = endpoints.ResourceContainer(
     sgvpDeleteUserRequestMsg
     )
@@ -285,6 +308,42 @@ class ParkingUsersApi(remote.Service):
         response = sgvpNewUserRegisterResponseMsg()
         msg = config.sgvehiclepark.sgvpnewuserregister(request)
         response.ResponseMsg = msg
+        return response
+    # ******************************************************************* #
+
+
+    # ******************************************************************* #
+    # Method sgvpGetUserInfo
+    # ******************************************************************* #
+    @endpoints.method(SGVPGETUSERINFO_REQCONTAINER, sgvpGetUserInfoResponseMsg,
+                      path='', http_method='POST',
+                      name='sgvpGetUserInfo')
+
+    # Method Definition
+    def sgvpGetUserInfo(self, request):
+        response = sgvpGetUserInfoResponseMsg()
+        response_msg = config.sgvehiclepark.sgvpgetuserinfo(request)
+
+        if not response_msg:
+            # No valid entry found
+            response.ResponseMsg = "Invalid User"
+        else:
+            # Valid entry found
+            response.ResponseMsg = "Data Found"
+            response.Cust_Nric = response_msg.Cust_Nric
+            response.Cust_Handphone = response_msg.Cust_Handphone
+            response.Cust_Amount = response_msg.Cust_Amount
+            response.Cust_FirstName = response_msg.Cust_FirstName
+            response.Cust_LastName = response_msg.Cust_LastName
+            response.Cust_Email = response_msg.Cust_Email
+            for each_veh in response_msg.Cust_Vehicle:
+                vehicle_data = sgvpVehicleTable()
+                vehicle_data.Veh_Chassisnumber = str(each_veh.Veh_Chassisnumber)
+                vehicle_data.Veh_Enginenumber = str(each_veh.Veh_Enginenumber)
+                vehicle_data.Veh_Regnumber = str(each_veh.Veh_Regnumber)
+                vehicle_data.Veh_Type = str(each_veh.Veh_Type)
+                response.Cust_Vehicle.append(vehicle_data)
+
         return response
     # ******************************************************************* #
 
@@ -486,7 +545,6 @@ class ParkingUsersApi(remote.Service):
     # ******************************************************************* #
     def sgvpUserTransactionHistory(self, request):
         response = sgvpUserTransactionHistoryResponseMsg()
-        response_data = sgvpTransactionHistoryTable()
         response_msg = config.sgvehiclepark.sgvpusertransactionhistory(request)
 
         if not response_msg:
@@ -496,6 +554,7 @@ class ParkingUsersApi(remote.Service):
             # Valid entry found
             response.ResponseMsg = "Valid Data Available"
             for each_msg in response_msg:
+                response_data = sgvpTransactionHistoryTable()
                 response_data.Amount = str(each_msg.Trans_Amount)
                 response_data.Date = str(each_msg.Trans_Date)
                 response_data.Location = str(each_msg.Trans_Location)
