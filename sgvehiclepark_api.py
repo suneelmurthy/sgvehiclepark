@@ -220,7 +220,7 @@ class sgvpReadCurrencyRequestMsg(messages.Message):
 
 class sgvpReadCurrencyResponseMsg(messages.Message):
     ResponseMsg = messages.StringField(1)
-    Amount = messages.IntegerField(2)
+    Amount = messages.FloatField(2)
 
 
 # sgvpUserCheck
