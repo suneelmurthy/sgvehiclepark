@@ -188,7 +188,7 @@ def sgvpnewuserregister(request):
         entity = models.Customer()
         entity.Cust_Nric = request.Cust_Nric
         entity.Cust_Handphone = request.Cust_Handphone
-        hash_pwd = hashlib.sha256(str(request.Cust_Password) + str(entity.Cust_Handphone))
+        hash_pwd = hashlib.sha256(str(request.Cust_Password) + str(request.Cust_Handphone))
         hash_pwd_hex = hash_pwd.hexdigest()
         # Hashing the password with salt key
         #hash_pwd = hashlib.pbkdf2_hmac('sha256', str(request.Cust_Password),str(entity.Cust_Handphone),100000)
@@ -210,7 +210,7 @@ def sgvpnewuserregister(request):
 # Throw an error if user does not exist
 def sgvpgetuserinfo(request):
     #Check if user exist
-    entity = models.Customer.query(models.Customer.Cust_Nric == request.id).get()
+    entity = models.Customer.query(models.Customer.Cust_Nric == request.Cust_Nric).get()
     return entity
 
 
@@ -311,6 +311,14 @@ def sgvptransactionhistory():
     #Read transaction table
     Transaction_entity = models.Transaction.query().fetch()
     return Transaction_entity
+
+
+# Method to read out latest 10 transactions
+# Throw an error if user does not exist or invalid password.
+def sgvpaccounthistory():
+    #Read transaction table
+    Account_entity = models.Customer.query().fetch()
+    return Account_entity
 
 
 # Method to read out if user is already registered

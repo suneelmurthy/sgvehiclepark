@@ -159,6 +159,21 @@ class sgvpTransactionHistoryResponseMsg(messages.Message):
     ResponseMsg = messages.StringField(2)
 
 
+# sgvpAccountHistory
+class sgvpAccountHistoryTable(messages.Message):
+    Cust_Nric = messages.StringField(1)
+    Cust_Handphone = messages.IntegerField(2)
+    Cust_FirstName = messages.StringField(3)
+    Cust_LastName = messages.StringField(4)
+    Cust_Email = messages.StringField(5)
+    Cust_Amount = messages.FloatField(6)
+
+
+class sgvpAccountHistoryResponseMsg(messages.Message):
+    ResponseData = messages.MessageField(sgvpAccountHistoryTable,1,repeated = True)
+    ResponseMsg = messages.StringField(2)
+
+
 
 # sgvpUpdateCreditCardInfo
 class sgvpUpdateCreditCardInfoRequestMsg(messages.Message):
@@ -597,6 +612,38 @@ class ParkingUsersApi(remote.Service):
                 response_data.Starttime = str(each_msg.Trans_Starttime.time())
                 response_data.Stoptime = str('Running') if not each_msg.Trans_Stoptime else str(each_msg.Trans_Stoptime.time())
                 response_data.Stopduration = str('Running') if not each_msg.Trans_Stopduration else str(each_msg.Trans_Stopduration)
+                response.ResponseData.append(response_data)
+        return response
+
+
+    # ******************************************************************* #
+    # Method sgvpAccountHistory
+    # ******************************************************************* #
+    @endpoints.method(message_types.VoidMessage,
+                      sgvpAccountHistoryResponseMsg,
+                      path='', http_method='GET',
+                      name='sgvpAccountHistory')
+    # ******************************************************************* #
+    # Method Definition
+    # ******************************************************************* #
+    def sgvpAccountHistory(self, unused_request):
+        response = sgvpAccountHistoryResponseMsg()
+        response_msg = config.sgvehiclepark.sgvpaccounthistory()
+
+        if not response_msg:
+            # No valid entry found
+            response.ResponseMsg = "No Valid Data Available"
+        else:
+            # Valid entry found
+            response.ResponseMsg = "Valid Data Available"
+            for each_msg in response_msg:
+                response_data = sgvpAccountHistoryTable()
+                response_data.Cust_Nric = str(each_msg.Cust_Nric)
+                response_data.Cust_Handphone = int(each_msg.Cust_Handphone)
+                response_data.Cust_FirstName = str(each_msg.Cust_FirstName)
+                response_data.Cust_LastName = str(each_msg.Cust_LastName)
+                response_data.Cust_Email = str(each_msg.Cust_Email)
+                response_data.Cust_Amount = float(each_msg.Cust_Amount)
                 response.ResponseData.append(response_data)
         return response
 
